@@ -1,7 +1,7 @@
 
 if(MSVC)
   include(FetchContent)
-  
+
   FetchContent_Declare(
     getopt
     GIT_REPOSITORY https://github.com/skandhurkat/Getopt-for-Visual-Studio.git
@@ -14,4 +14,5 @@ if(MSVC)
 
   message(STATUS "getopt ${getopt_SOURCE_DIR}")
   set(ENV{EXTRA_INCLUDES} "$ENV{EXTRA_INCLUDES} ${getopt_SOURCE_DIR}")
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
