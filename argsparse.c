@@ -7,263 +7,82 @@
  * 
  */
 
-#include "argsparse.h"
+#include "iterate.h"
+#include "internal_funcs.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
 #include <getopt.h>
 
-typedef struct _argparse_argument_linked
+ARG_DATA_HANDLE argsparse_create(const char* title) 
 {
-    HARGPARSE_ARG argument;
-    void* next;
-} t_argparse_argument_linked;
-
-typedef struct _argparse_argument_linked* HARGPARSE_ARG_LINKED;
-typedef struct _argparse_struct
-{
-    char shortopts[ARGSPARSE_MAX_ARGUMENTS * 2];
-    int count;
-    HARGPARSE_ARG_LINKED arguments;
-    const char* title;
-} t_argparse_struct;
-
-static HARGPARSE_ARG_LINKED delete_argument(HARGPARSE_ARG_LINKED arg);
-static int parse_value(HARGPARSE_VALUE* ref, tArgsparseValuetype type, const char* value);
-
-HARGPARSE_HANDLE argsparse_create(const char* title) 
-{
-    HARGPARSE_HANDLE p = calloc(1, sizeof(t_argparse_struct));
+    ARG_DATA_HANDLE p = calloc(1, sizeof(argument_data_t));
     p->title = title;
     p->arguments = NULL;
+    return p;
 }
 
-void argsparse_delete(HARGPARSE_HANDLE handle)
+void argsparse_free(ARG_DATA_HANDLE handle)
 {
     HARGPARSE_ARG_LINKED next = handle->arguments;
     while (next)
     {
-        next = delete_argument(next);
+        next = free_linked_argument(next);
     }
     free (handle);
 }
 
-HARGPARSE_ARG argsparse_argument_allocate(const char* name, const char* desc)
+ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* name, const char* desc, void* value)
 {
-    HARGPARSE_ARG p = calloc(1, sizeof(t_argparse_argument));
-    p->name = strdup(name);
-    p->description = strdup(desc);
-    return p;
-}
-
-HARGPARSE_ARG argsparse_create_argument(tArgsparseValuetype type, const char* name, const char* desc, const char* value)
-{
-    HARGPARSE_ARG p = argsparse_argument_allocate(name, desc);
+    ARG_ARGUMENT_HANDLE p = create_argument(name, desc);
     p->type = type;
     parse_value(&p->value, type, value);
     return p;
 }
 
-char* argsparse_get_shortopts(HARGPARSE_HANDLE handle)
+char* argsparse_get_shortopts(ARG_DATA_HANDLE handle)
 {
     return (handle) ? handle->shortopts : NULL;
 }
 
-const char* argsparse_get_title(HARGPARSE_HANDLE handle)
+const char* argsparse_get_title(ARG_DATA_HANDLE handle)
 {
     return (handle) ? handle->title : NULL;
 }
 
-static int argument_compare_name(HARGPARSE_ARG arg, void* data)
+ARG_ARGUMENT_HANDLE argsparse_argument_by_name(ARG_DATA_HANDLE handle, const char* name)
 {
-    const char* name = (const char*)data;
-    return strcmp(name, arg->name);
+    return iterate_arguments_return_on_zero(handle, predicate_compare_name, (void*)name);
 }
 
-static int argument_compare_short_name(HARGPARSE_ARG arg, void* data)
+ARG_ARGUMENT_HANDLE argsparse_argument_by_short_name(ARG_DATA_HANDLE handle, int shortname)
 {
-    int name = *((int*)data);
-    return (name == arg->name_short) ? 0 : 1;
+    return iterate_arguments_return_on_zero(handle, predicate_compare_short_name, (void*)&shortname);
 }
 
-HARGPARSE_ARG argsparse_argument_get(HARGPARSE_HANDLE handle, int(*cmp)(HARGPARSE_ARG, void*), void* cmpdata)
-{
-    HARGPARSE_ARG ret = NULL;
-    HARGPARSE_ARG_LINKED linked = ((t_argparse_struct*)handle)->arguments;
-    while (linked && cmp)
-    {
-        HARGPARSE_ARG argument = linked->argument;
-        if ((*cmp)(argument, cmpdata) == 0)
-        {
-            ret = argument;
-            break;
-        }
-        linked = linked->next;
-    }
-    return ret;
-}
-
-HARGPARSE_ARG argsparse_argument_by_name(HARGPARSE_HANDLE handle, const char* name)
-{
-    return argsparse_argument_get(handle, argument_compare_name, (void*)name);
-}
-
-HARGPARSE_ARG argsparse_argument_by_short_name(HARGPARSE_HANDLE handle, int shortname)
-{
-    return argsparse_argument_get(handle, argument_compare_short_name, (void*)&shortname);
-}
-
-static void do_option_long(int idx, HARGPARSE_ARG arg, void* data)
-{
-    struct option* options = (struct option*)data;
-    options[idx].name = arg->name;
-    options[idx].has_arg = arg->type != ARGSPARSE_TYPE_NONE;
-    options[idx].val = arg->name_short;
-}
-
-int argsparse_argument_action(HARGPARSE_HANDLE handle, void (*action)(int, HARGPARSE_ARG, void*), void* actiondata)
+int argsparse_argument_count(ARG_DATA_HANDLE handle)
 {
     int ret = 0;
-    t_argparse_argument_linked* iterator = ((t_argparse_struct*)handle)->arguments;
-    while (iterator)
-    {
-        // invoke caller action
-        if (action)
-            (*action)(ret, iterator->argument, actiondata);
-        ret++;
-        iterator = iterator->next;
-    }
+    iterate_arguments_return_on_zero(handle, action_count, &ret);
     return ret;
-}
-
-int argsparse_argument_count(HARGPARSE_HANDLE handle)
-{
-    return argsparse_argument_action(handle, NULL, NULL);
-}
-
-static const char* FindEndTerminator(const char* str)
-{
-    const char* end = NULL;
-    char terminators[] = {' ', '\0'};
-    for (int i = 0; str && end == NULL && i < sizeof(terminators); i++)
-    {
-        end = strchr(str, terminators[i]);
-    }
-    return end;
-}
-
-static int parse_value(HARGPARSE_VALUE* ref, tArgsparseValuetype type, const char* value)
-{
-    int ret = 0;
-    if (type == ARGSPARSE_TYPE_NONE)
-        return ret;
-
-    if (*ref == NULL)
-        *ref = calloc(1, sizeof(t_argparse_value));
-    switch (type)
-    {
-        case ARGSPARSE_TYPE_DOUBLE:
-            (*ref)->doublevalue = value ? atof(value) : -1.0;
-        break;
-        case ARGSPARSE_TYPE_INT:
-            (*ref)->intvalue = value ? atoi(value) : -1;
-        break;
-        case ARGSPARSE_TYPE_STRING:
-        {
-            const char* end = FindEndTerminator(value);
-            if (end)
-            {
-                int len = end - value;
-                if (len > 0 && len < ARGSPARSE_VALUE_STRING_SIZE)
-                {
-                    strncpy((*ref)->stringvalue, value, len);
-                    (*ref)->stringvalue[len] = 0;
-                }
-                else
-                    ret = -1;
-            }
-            else
-                ret = -1;
-        }
-        break;
-        default:
-            ret = -1;
-        break;
-    }
-    return ret;
-}
-
-int set_short_option(char c, HARGPARSE_HANDLE handle, HARGPARSE_ARG arg)
-{
-    int ret = -1;
-    char* used = handle->shortopts;
-    // iterate used until terminating 0
-    while (*used)
-    {
-        // used - break the loop and move to next longname character
-        if (*used == c)
-        {
-            break;
-        }
-        used++;
-    }
-    // unused - set value and break
-    if (*used == 0)
-    {
-        *used = c;
-        *(used + 1) = (arg->type == ARGSPARSE_TYPE_NONE) ? 0 : ':';
-        arg->name_short = c;
-        ret = 0;
-    }
-    return ret;
-}
-
-void generate_short_name(HARGPARSE_HANDLE handle, HARGPARSE_ARG arg)
-{
-    char* longname = arg->name;
-    char c;
-    // iterate characters of longname as long as necessary
-    while(c = *longname)
-    {
-        if (set_short_option(c, handle, arg))
-        {
-            longname++;
-            continue;
-        }
-        break;
-    }
-    // none of the longname characters accepted
-    if (!c)
-    {
-        // iterate characters from 'a' until the short option is set
-        c = 'a';
-        while (1)
-        {
-            if (set_short_option(c, handle, arg))
-            {
-                c++;
-                continue;
-            }
-            break;
-        }
-    }
 }
 
 /// @brief Add argument moves argument ownership to handle
 /// @param handle Handle to allocated arguments structure
 /// @param argument Handle to allocated argument
-int argsparse_put_argument(HARGPARSE_HANDLE handle, HARGPARSE_ARG* href)
+ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
 {
     if (handle->count >= ARGSPARSE_MAX_ARGUMENTS)
     {
         // didn't take ownership
-        return -1;
+        return ERROR_MAX_ARGUMENTS;
     }
     handle->count++;
-    HARGPARSE_ARG arg = *href;
-    HARGPARSE_ARG_LINKED linked = calloc(1, sizeof(t_argparse_argument_linked));
-    linked->argument = arg;
+    ARG_ARGUMENT_HANDLE arg = *href;
+    HARGPARSE_ARG_LINKED new_link = calloc(1, sizeof(t_argparse_argument_linked));
+    new_link->argument = arg;
     generate_short_name(handle, arg);
     if (handle->arguments)
     {
@@ -272,115 +91,210 @@ int argsparse_put_argument(HARGPARSE_HANDLE handle, HARGPARSE_ARG* href)
         {
             next = next->next;
         }
-        next->next = linked;
+        next->next = new_link;
     }
     else
-        handle->arguments = linked;
+        handle->arguments = new_link;
     // take ownership
     *href = NULL;
-    return 0;
+    return ERROR_NONE;
 }
 
-void argsparse_add_int(HARGPARSE_HANDLE handle, const char* option, const char* description, int value)
+void argsparse_add_int(ARG_DATA_HANDLE handle, const char* option, const char* description, int value)
 {
 
 }
 
-void argsparse_add_double(HARGPARSE_HANDLE handle, const char* option, const char* description, double value)
+void argsparse_add_double(ARG_DATA_HANDLE handle, const char* option, const char* description, double value)
 {
 
 }
 
-void AddArgumentTypeOnOff(HARGPARSE_HANDLE handle, const char* option, const char* description, const char* value)
+void AddArgumentTypeOnOff(ARG_DATA_HANDLE handle, const char* option, const char* description, const char* value)
 {
 
 }
 
-void argsparse_add_str(HARGPARSE_HANDLE handle, const char* option, const char* description, const char* value)
+void argsparse_add_str(ARG_DATA_HANDLE handle, const char* option, const char* description, const char* value)
 {
 
 }
 
-int argsparse_add_flag(HARGPARSE_HANDLE handle, const char* name, const char* description)
+int argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
 {
-    HARGPARSE_ARG p = argsparse_argument_allocate(name, description);
-    p->type = ARGSPARSE_TYPE_NONE;
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_FLAG, name, description, (void*)(uintptr_t)value);
+
     int err = argsparse_put_argument(handle, &p);
-    if (err)
-        free (p);
+
+    if (p != NULL)
+    {
+        free_argument(&p);
+    }
+    
     return err;
 }
 
-int argsparse_parse_args(HARGPARSE_HANDLE handle, char* const *argv, int argc)
+int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
 {
     int count = 0;
-    struct option *long_options = calloc(count, sizeof(struct option));
-        // {
-        //   /* These options set a flag. */
-        //   {"verbose", no_argument,       &verbose_flag, 1},
-        //   {"brief",   no_argument,       &verbose_flag, 0},
-        //   /* These options don’t set a flag.
-        //      We distinguish them by their indices. */
-        //   {"file",    required_argument, 0, 'f'},
-        //   {0, 0, 0, 0}
-        // };
-    /* getopt_long stores the option index here. */
-    int option_index = 0;
-    argsparse_argument_action(handle, do_option_long, (void*)long_options);
-    int c;
-    while(1)
+    if (argc > 1)
     {
-        c = getopt_long(argc, argv,
-                        handle->shortopts,
-                        (const struct option *)long_options,
-                        &option_index);
-
-        /* Detect the end of the options. */
-        if (c == -1)
-            break;
-
-        HARGPARSE_ARG arg = argsparse_argument_by_short_name(handle, c);
-        if (arg == NULL)
+        struct option *long_options = calloc(argc, sizeof(struct option));
+            // {
+            //   /* These options set a flag. */
+            //   {"verbose", no_argument,       &verbose_flag, 1},
+            //   {"brief",   no_argument,       &verbose_flag, 0},
+            //   /* These options don’t set a flag.
+            //      We distinguish them by their indices. */
+            //   {"file",    required_argument, 0, 'f'},
+            //   {0, 0, 0, 0}
+            // };
+        /* getopt_long stores the option index here. */
+        int option_index = 0;
+        iterate_arguments_return_on_zero(handle, action_do_option_long, (void*)long_options);
+        int c;
+        while(1)
         {
-            printf ("invalid option -%c", c);
-            argsparse_usage(handle);
-            exit(1);
-        }
-        else
-        {
-            int err = parse_value(&arg->value, arg->type, optarg);
-            if (!err)
+            c = getopt_long(argc, argv,
+                            handle->shortopts,
+                            (const struct option *)long_options,
+                            &option_index);
+
+            /* Detect the end of the options. */
+            if (c == -1)
+                break;
+
+            /* opt->flag */
+            if (c == 0)
             {
-                arg->parsed = 1;
                 count++;
+                continue;
+            }
+
+            ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_short_name(handle, c);
+            if (arg == NULL)
+            {
+                printf ("invalid option -%c", c);
+                argsparse_usage(handle);
+                exit(1);
+            }
+            else
+            {
+                int err = parse_value(&arg->value, arg->type, optarg);
+                if (!err)
+                {
+                    arg->parsed = 1;
+                    count++;
+                }
             }
         }
+        free(long_options);
+        iterate_arguments_return_on_zero(handle, action_mark_parsed_flags, NULL);
     }
     return count;
 }
 
-void argsparse_usage(HARGPARSE_HANDLE handle)
+void argsparse_usage(ARG_DATA_HANDLE handle)
 {
 
 }
 
-static HARGPARSE_ARG_LINKED delete_argument(HARGPARSE_ARG_LINKED del)
+////////////////////////
+// Internal functions //
+////////////////////////
+
+static ARG_ARGUMENT_HANDLE create_argument(const char* name, const char* desc)
 {
-    HARGPARSE_ARG_LINKED ret = del != NULL ? del->next : NULL;
-    del->next = NULL;
-    if (del != NULL)
+    ARG_ARGUMENT_HANDLE p = calloc(1, sizeof(argsparse_argument_t));
+    copy_to_argument_string(p->name, name);
+    copy_to_argument_string(p->description, desc);
+    return p;
+}
+
+static HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED linked)
+{
+    HARGPARSE_ARG_LINKED next = NULL;
+    if (linked != NULL)
     {
-        HARGPARSE_ARG arg = del->argument; 
-        del->argument = NULL;
-        if (arg->value)
-            free (arg->value);
-        arg->value = NULL;
-        free (arg->name);
-        arg->name = NULL;
-        free (arg->description);
-        arg->description = NULL;
-        free(arg);
-        free(del);
+        next = linked->next;
+        linked->next = NULL;
+        ARG_ARGUMENT_HANDLE* arg = &(linked->argument);
+        free_argument(arg);
+        free(linked);
+    }
+    return next;
+}
+
+static void free_argument(ARG_ARGUMENT_HANDLE* handle)
+{
+    free(*handle);
+    *handle = NULL;
+}
+
+////////////////////////////////////
+// Iterate actions and predicates //
+////////////////////////////////////
+
+static ARG_ARGUMENT_HANDLE iterate_arguments_return_on_zero(ARG_DATA_HANDLE handle, int(*predicate)(int, ARG_ARGUMENT_HANDLE, void*), void* data)
+{
+    ARG_ARGUMENT_HANDLE ret = NULL;
+    HARGPARSE_ARG_LINKED iterator = ((argument_data_t*)handle)->arguments;
+    int idx = 0;
+    while (iterator && predicate)
+    {
+        ARG_ARGUMENT_HANDLE argument = iterator->argument;
+        // call predicate and return when zero
+        if ((*predicate)(idx, argument, data) == 0)
+        {
+            ret = argument;
+            break;
+        }
+        idx++;
+        iterator = iterator->next;
     }
     return ret;
+}
+
+static int action_do_option_long(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+{
+    struct option* options = (struct option*)data;
+    options[idx].name = arg->name;
+    options[idx].has_arg = arg->type != ARGSPARSE_TYPE_NONE && arg->type != ARGSPARSE_TYPE_FLAG;
+    options[idx].val = arg->name_short;
+    options[idx].flag = (arg->type == ARGSPARSE_TYPE_FLAG) ? &(arg->value.flagvalue) : NULL;
+    return 1;
+}
+
+static int action_count(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+{
+    int* p = (int*)(uintptr_t)data;
+    int value = *p;
+    *p = value + 1;
+    return 1;
+}
+
+static int action_mark_parsed_flags(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+{
+    if (arg && arg->type == ARGSPARSE_TYPE_FLAG)
+    {
+        // flag value was set by getopts_long
+        if (arg->value.flagvalue == arg->name_short)
+        {
+            arg->parsed = 1;
+            arg->value.flagvalue = 1;
+        }
+    }
+    return 1;
+}
+
+static int predicate_compare_name(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+{
+    const char* name = (const char*)data;
+    return strcmp(name, arg->name);
+}
+
+static int predicate_compare_short_name(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+{
+    int name = *((int*)data);
+    return (name == arg->name_short) ? 0 : 1;
 }
