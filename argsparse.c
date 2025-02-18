@@ -162,41 +162,49 @@ int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
         /* getopt_long stores the option index here. */
         int option_index = 0;
         optind = 0;
-        iterate_arguments_return_on_zero(handle, action_do_option_long, (void*)long_options);
-        int c;
-        while(1)
+        iterate_arguments_return_on_zero(handle, action_do_option_long, (void*)(long_options + 1));
+        int c = 0;
+        while(c != -1)
         {
             c = getopt_long(argc, argv,
                             handle->shortopts,
                             (const struct option *)long_options,
                             &option_index);
 
-            /* Detect the end of the options. */
-            if (c == -1)
-                break;
 
-            /* opt->flag */
-            if (c == 0)
+            switch (c)
             {
-                count++;
-                continue;
-            }
+                /* Detect the end of the options. */
+                case -1:
+                    continue;
 
-            ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_short_name(handle, c);
-            if (arg == NULL)
-            {
-                printf ("invalid option -%c", c);
-                argsparse_usage(handle);
-                exit(1);
-            }
-            else
-            {
-                int err = parse_value(&arg->value, arg->type, optarg);
-                if (!err)
-                {
-                    arg->parsed = 1;
+                /* opt->flag */
+                case 0:
                     count++;
-                }
+                    continue;
+
+                case 'h':
+                    argsparse_usage(handle, argv[0]);
+                    exit(0);
+
+                default:
+                    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_short_name(handle, c);
+                    if (arg == NULL)
+                    {
+                        printf ("invalid option -%c\n", c);
+                        argsparse_usage(handle, argv[0]);
+                        exit(1);
+                    }
+                    else
+                    {
+                        int err = parse_value(&arg->value, arg->type, optarg);
+                        if (!err)
+                        {
+                            arg->parsed = 1;
+                            count++;
+                        }
+                    }
+                    break;
             }
         }
         free(long_options);
