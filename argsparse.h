@@ -136,7 +136,7 @@ int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const* argv, int argc);
 
 /// @brief Prints all arguments in usage message
 /// @param handle 
-void argsparse_usage(ARG_DATA_HANDLE handle);
+void argsparse_usage(ARG_DATA_HANDLE handle, const char* const executable);
 
 const char* argsparse_get_title(ARG_DATA_HANDLE handle);
 char* argsparse_get_shortopts(ARG_DATA_HANDLE handle);

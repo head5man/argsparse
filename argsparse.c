@@ -213,9 +213,30 @@ int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
     return count;
 }
 
-void argsparse_usage(ARG_DATA_HANDLE handle)
+void argsparse_usage(ARG_DATA_HANDLE handle, const char* const executable)
 {
+    // is there a separator?
+    const char* separator = strrchr(executable, '/') ? strrchr(executable, '/') : strrchr(executable, '\\');
+    // advance or fallback to executable
+    const char* basename = separator ? separator + 1 : executable;
 
+    printf("usage: %s", basename);
+    char* shortopt = handle->shortopts;
+    while (*shortopt)
+    {
+        char c = *shortopt;
+        shortopt++;
+        if (c == ':')
+            continue;
+
+        printf(" [-%c]", c);
+    }
+    printf("\n%s\n", handle->title);
+
+    printf("optional arguments:\n");
+    size_t width = 0;
+    iterate_arguments_return_on_zero(handle, action_long_option_width, &width);
+    iterate_arguments_return_on_zero(handle, action_argument_usage, (void*)(uintptr_t)width);
 }
 
 ////////////////////////
@@ -286,6 +307,26 @@ static int action_do_option_long(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
     options[idx].has_arg = arg->type != ARGSPARSE_TYPE_NONE && arg->type != ARGSPARSE_TYPE_FLAG;
     options[idx].val = arg->name_short;
     options[idx].flag = (arg->type == ARGSPARSE_TYPE_FLAG) ? &(arg->value.flagvalue) : NULL;
+    return 1;
+}
+
+static int action_long_option_width(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+{
+    size_t width = strlen(arg->name);
+    size_t* ret = (size_t*)(uintptr_t)data;
+    *ret = width > *ret ? width : *ret;
+    return 1;
+}
+
+static int action_argument_usage(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+{
+    char buffer[ARGSPARSE_MAX_STRING_SIZE] = {0,};
+    int width = (int)(uintptr_t)data;
+    //-<shortopt>, --<longopt> [argtype] <description>
+    printf("-%c, ", arg->name_short);
+    printf("--%-*s ", width, arg->name);
+    printf("[%s] %s\n", get_expected_argument_type(arg->type), arg->description);
+    printf("  def: %s\n", get_argument_value_string(arg, buffer, ARGSPARSE_MAX_STRING_SIZE));
     return 1;
 }
 

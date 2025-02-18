@@ -2,8 +2,50 @@
 #include "internal_funcs.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <malloc.h>
 #include <string.h>
+
+const char* get_expected_argument_type(ARG_TYPE type)
+{
+    switch (type)
+    {
+        case ARGSPARSE_TYPE_DOUBLE:
+            return ":dbl";
+        case ARGSPARSE_TYPE_FLAG:
+            return "none";
+        case ARGSPARSE_TYPE_INT:
+            return ":int";
+        case ARGSPARSE_TYPE_STRING:
+            return ":str";
+        default:
+            return ":wtf";
+    }
+}
+
+const char* get_argument_value_string(ARG_ARGUMENT_HANDLE arg, char* buffer, size_t buflen)
+{
+    switch (arg->type)
+    {
+        case ARGSPARSE_TYPE_FLAG:
+            // flag
+            snprintf(buffer, buflen, "%d", arg->value.flagvalue);
+            break;
+        case ARGSPARSE_TYPE_INT:
+            // integer
+            snprintf(buffer, buflen, "%d", arg->value.intvalue);
+            break;
+        case ARGSPARSE_TYPE_DOUBLE:
+            // double
+            snprintf(buffer, buflen, "%f", arg->value.doublevalue);
+            break;
+        case ARGSPARSE_TYPE_STRING:
+            snprintf(buffer, buflen, "%s", arg->value.stringvalue);
+        default:
+            break;
+    }
+    return buffer;
+}
 
 void copy_to_argument_string(char* dest, const char* source)
 {
