@@ -32,7 +32,42 @@ char gBuffer[BUFFER_SIZE] = { 0, };
 char* gArgv[ARGV_SIZE] = { nullptr, };
 int gArgc = 0;
 
-class TEST_FIXTURE:public ::testing::TestWithParam<ARG_TYPE>
+class TestParams
+{
+public:
+    static const TestParams StringType;
+    static const TestParams IntType;
+    static const TestParams DoubleType;
+    static const TestParams FlagType;
+
+    TestParams(ARG_TYPE type, const char* string)
+    {
+        Type = type;
+        memcpy(&Value.stringvalue, string, strlen(string));
+    }
+
+    TestParams(ARG_TYPE type, double value)
+    {
+        Type = type;
+        Value.doublevalue = value;
+    }
+
+    TestParams(ARG_TYPE type, int value)
+    {
+        Type = type;
+        Value.intvalue = value;
+    }
+
+    ARG_TYPE Type;
+    ARG_VALUE Value;
+};
+
+const TestParams TestParams::StringType(ARGSPARSE_TYPE_STRING, "1234");
+const TestParams TestParams::DoubleType(ARGSPARSE_TYPE_DOUBLE, 1234.1);
+const TestParams TestParams::IntType(ARGSPARSE_TYPE_INT, 1234);
+const TestParams TestParams::FlagType(ARGSPARSE_TYPE_FLAG, 1);
+
+class TEST_FIXTURE:public ::testing::TestWithParam<TestParams>
 {
   protected:
     void SetUp() override
@@ -73,15 +108,11 @@ TEST_F(TEST_FIXTURE, HandleShouldGetTitle)
 TEST_F(TEST_FIXTURE, ShouldAppendShortOptions)
 {
     gHandle = argsparse_create(NULL);
-    std::cerr << "1" << std::endl; 
     char* shortopts = argsparse_get_shortopts(gHandle);
-    std::cerr << "2" << std::endl;
     ASSERT_EQ(0, *shortopts);
-    std::cerr << "3" << std::endl;
-    ARG_ARGUMENT_HANDLE harg = argsparse_create_argument_with_value(ARG_TYPE::ARGSPARSE_TYPE_INT, "flag", "description", "1234");
-    std::cerr << "4" << std::endl;
+
+    ARG_ARGUMENT_HANDLE harg = argsparse_create_argument_with_value(ARG_TYPE::ARGSPARSE_TYPE_INT, "integer", "description", NULL);
     argsparse_put_argument(gHandle, &harg);
-    std::cerr << "5" << std::endl;
     ASSERT_STREQ("f:", shortopts);
 }
 
@@ -317,10 +348,10 @@ TEST_F(TEST_FIXTURE, ShouldParseDoubleQuotedWhitespaceString)
 
 TEST_P(TEST_FIXTURE, ShouldAddArgument)
 {
-    ARG_TYPE type = GetParam();
+    TestParams params = GetParam();
     gHandle = argsparse_create(NULL);
     ASSERT_EQ(0, argsparse_argument_count(gHandle));
-    ARG_ARGUMENT_HANDLE h = argsparse_create_argument_with_value(type, "argument", "This is an argument", NULL);
+    ARG_ARGUMENT_HANDLE h = argsparse_create_argument_with_value(params.Type, "argument", "This is an argument", NULL);
     ASSERT_THAT(h, NotNull());
     argsparse_put_argument(gHandle, &h);
     ASSERT_THAT(h, IsNull());
@@ -329,26 +360,27 @@ TEST_P(TEST_FIXTURE, ShouldAddArgument)
 
 TEST_P(TEST_FIXTURE, ShouldInitializeValue)
 {
-    ARG_TYPE type = GetParam();
+    TestParams param = GetParam();
     gHandle = argsparse_create(NULL);
     ASSERT_EQ(0, argsparse_argument_count(gHandle));
-    ARG_ARGUMENT_HANDLE h = argsparse_create_argument_with_value(type, "flag", "This is an argument", "1234");
+
+    ARG_ARGUMENT_HANDLE h = argsparse_create_argument_with_value(param.Type, "flag", "This is an argument", &(param.Value));
     argsparse_put_argument(gHandle, &h);
     ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "flag");
     ARG_VALUE value = arg->value;
-    switch (type)
+    switch (param.Type)
     {
         case ARGSPARSE_TYPE_FLAG:
-            ASSERT_EQ(value.flagvalue, 1);
+            ASSERT_EQ(value.flagvalue, param.Value.flagvalue);
         break;
         case ARGSPARSE_TYPE_STRING:
-            ASSERT_STREQ(value.stringvalue, "1234");
+            ASSERT_STREQ(value.stringvalue, param.Value.stringvalue);
         break;
         case ARGSPARSE_TYPE_INT:
-            ASSERT_EQ(value.intvalue, 1234);
+            ASSERT_EQ(value.intvalue, param.Value.intvalue);
         break;
         case ARGSPARSE_TYPE_DOUBLE:
-            ASSERT_DOUBLE_EQ(value.doublevalue, 1234.0);
+            ASSERT_DOUBLE_EQ(value.doublevalue, param.Value.doublevalue);
         break;
         default:
             GTEST_FAIL();
@@ -360,9 +392,9 @@ INSTANTIATE_TEST_SUITE_P(
         ArgmentTypesTests,
         TEST_FIXTURE,
         ::testing::Values(
-            ARGSPARSE_TYPE_FLAG,
-            ARGSPARSE_TYPE_DOUBLE, 
-            ARGSPARSE_TYPE_INT,
-            ARGSPARSE_TYPE_STRING
+            TestParams::FlagType,
+            TestParams::DoubleType, 
+            TestParams::IntType,
+            TestParams::FlagType
         ));
 }

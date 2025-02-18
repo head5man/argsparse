@@ -48,6 +48,8 @@ typedef union _argparse_value
     double doublevalue;
 } argsparse_value_t;
 
+typedef union _argparse_value ARG_VALUE;
+
 typedef struct _argparse_argument
 {
     argsparse_type_e type;
@@ -55,12 +57,11 @@ typedef struct _argparse_argument
     int name_short;
     char name[ARGSPARSE_MAX_STRING_SIZE];
     char description[ARGSPARSE_MAX_STRING_SIZE];
-    argsparse_value_t value;
+    ARG_VALUE value;
 } argsparse_argument_t;
 
 typedef struct _argparse_argument* ARG_ARGUMENT_HANDLE;
 typedef struct _argparse_data* ARG_DATA_HANDLE;
-typedef union _argparse_value ARG_VALUE;
 typedef enum _argsparse_type ARG_TYPE;
 typedef enum _argsparse_errors ARG_ERROR;
 
@@ -76,7 +77,7 @@ void argsparse_free(ARG_DATA_HANDLE handle);
 
 ARG_ARGUMENT_HANDLE argsparse_create_argument(const char* option, const char* desc);
 
-ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* option, const char* desc, const char* value);
+ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* option, const char* desc, ARG_VALUE* value);
 
 /// @brief Add argument moves argument ownership to handle
 /// @param handle Handle to allocated arguments structure

@@ -38,11 +38,12 @@ void argsparse_free(ARG_DATA_HANDLE handle)
     }
 }
 
-ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* name, const char* desc, const char* value)
+ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* name, const char* desc, ARG_VALUE* value)
 {
     ARG_ARGUMENT_HANDLE p = create_argument(name, desc);
     p->type = type;
-    parse_value(&p->value, type, value);
+    if (value)
+        memcpy(&p->value, value, sizeof(ARG_VALUE));
     return p;
 }
 
@@ -106,35 +107,39 @@ ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* hr
 
 ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
 {
-    char buffer[12] = { 0, };
-    const char* str_value = itoa(value, buffer, 10);
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_INT, name, description, str_value);
+    ARG_VALUE argvalue;
+    argvalue.intvalue = value;
+
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_INT, name, description, &argvalue);
 
     return argsparse_put_argument(handle, &p);
 }
 
 ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const char* description, double value)
 {
-    char buffer[ARGSPARSE_MAX_STRING_SIZE] = { 0, };
-    snprintf(buffer, ARGSPARSE_MAX_STRING_SIZE, "%f", value);
+    ARG_VALUE argvalue;
+    argvalue.doublevalue = value;
 
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_DOUBLE, name, description, buffer);
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_DOUBLE, name, description, &argvalue);
 
     return argsparse_put_argument(handle, &p);
 }
 
 ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const char* description, const char* value)
 {
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_STRING, name, description, value);
+    ARG_VALUE argvalue;
+    copy_to_argument_string(argvalue.stringvalue, value);
+
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_STRING, name, description, &argvalue);
     return argsparse_put_argument(handle, &p);
 }
 
 ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
 {
-    char buffer[12] = { 0, };
-    snprintf(buffer, 12, "%d", value);
+    ARG_VALUE argvalue;
+    argvalue.flagvalue = value == 0 ? 0 : 1;
 
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_FLAG, name, description, buffer);
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_FLAG, name, description, &argvalue);
 
     return argsparse_put_argument(handle, &p);
 }
