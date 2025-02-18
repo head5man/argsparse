@@ -12,7 +12,7 @@ typedef struct _argparse_argument_linked
 typedef struct _argparse_argument_linked* HARGPARSE_ARG_LINKED;
 typedef struct _argparse_data
 {
-    char shortopts[ARGSPARSE_MAX_ARGUMENTS * 2];
+    char shortopts[ARGSPARSE_MAX_ARGS * 2];
     int count;
     HARGPARSE_ARG_LINKED arguments;
     const char* title;

@@ -18,21 +18,25 @@ extern "C"
 #   define ARGSPARSE_MAX_STRING_SIZE 80
 #endif
 
-#ifndef ARGSPARSE_MAX_ARGUMENTS
-#   define ARGSPARSE_MAX_ARGUMENTS 40
+#ifndef ARGSPARSE_MAX_ARGS
+#   define ARGSPARSE_MAX_ARGS 40
 #endif
 
 typedef enum _argsparse_errors {
     ERROR_NONE = 0,
-    ERROR_MAX_ARGUMENTS = -1,
+    ERROR_UNKNOWN = -1,
+    ERROR_MAX_ARGS = -2,
 } e_argsparse_errors;
 
 typedef enum _argsparse_type {
-    ARGSPARSE_TYPE_NONE,
+    /// @brief illegal value
+    ARGSPARSE_TYPE_NONE = -1,
     ARGSPARSE_TYPE_STRING,
     ARGSPARSE_TYPE_INT,
     ARGSPARSE_TYPE_DOUBLE,
+    /// @brief value of flag can be tested against zero
     ARGSPARSE_TYPE_FLAG,
+    /// @brief count of legal types
     ARGSPARSE_TYPE_CNT
 } argsparse_type_e;
 
@@ -72,7 +76,7 @@ void argsparse_free(ARG_DATA_HANDLE handle);
 
 ARG_ARGUMENT_HANDLE argsparse_create_argument(const char* option, const char* desc);
 
-ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* option, const char* desc, void* value);
+ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* option, const char* desc, const char* value);
 
 /// @brief Add argument moves argument ownership to handle
 /// @param handle Handle to allocated arguments structure
@@ -85,33 +89,49 @@ ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* ar
 /// @param option Option cmdline flag
 /// @param description Description of argument
 /// @param value Default value
-void argsparse_add_int(ARG_DATA_HANDLE handle, const char* option, const char* description, int value);
+/// @return
+/// ERROR_NONE(0) - success
+///
+/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* option, const char* description, int value);
 
 /// @brief Add DOUBLE argument
 /// @param handle Handle to allocated arguments structure
 /// @param option Option cmdline flag
 /// @param description Description of argument
 /// @param value Default value
-void argsparse_add_double(ARG_DATA_HANDLE handle, const char* option, const char* description, double value);
+/// @return
+/// ERROR_NONE(0) - success
+///
+/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* option, const char* description, double value);
 
 /// @brief Add string argument
 /// @param handle Handle to allocated arguments structure
 /// @param option Option cmdline flag
 /// @param description Description of argument
 /// @param value Default value
-void argsparse_add_str(ARG_DATA_HANDLE handle, const char* option, const char* description, const char* value);
+/// @return
+/// ERROR_NONE(0) - success
+///
+/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* option, const char* description, const char* value);
 
 /// @brief Add argument flag only
 /// @param handle Handle to allocated arguments structure
 /// @param option Option cmdline flag
 /// @param description Description of argument
-int argsparse_add_flag(ARG_DATA_HANDLE handle, const char* option, const char* description, int value);
+/// @return
+/// ERROR_NONE(0) - success
+///
+/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* option, const char* description, int value);
 
 /// @brief Parse cmdline argument against added arguments 
 /// @param handle Handle to allocated arguments structure
 /// @param argsv 
 /// @param argc 
-int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc);
+int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const* argv, int argc);
 
 /// @brief Prints all arguments in usage message
 /// @param handle 
@@ -119,7 +139,7 @@ void argsparse_usage(ARG_DATA_HANDLE handle);
 
 const char* argsparse_get_title(ARG_DATA_HANDLE handle);
 char* argsparse_get_shortopts(ARG_DATA_HANDLE handle);
-ARG_ARGUMENT_HANDLE argsparse_argument_by_predicate(ARG_DATA_HANDLE handle, int (*predicate)(ARG_ARGUMENT_HANDLE, void*), void* data);
+
 ARG_ARGUMENT_HANDLE argsparse_argument_by_name(ARG_DATA_HANDLE handle, const char* name);
 ARG_ARGUMENT_HANDLE argsparse_argument_by_short_name(ARG_DATA_HANDLE handle, int shortname);
 int argsparse_argument_count(ARG_DATA_HANDLE handle);

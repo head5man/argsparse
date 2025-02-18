@@ -36,11 +36,9 @@ const char* find_string_end(const char* str)
     return end;
 }
 
-int parse_value(ARG_VALUE* ref, ARG_TYPE type, void* value)
+int parse_value(ARG_VALUE* ref, ARG_TYPE type, const char* str_value)
 {
     int ret = 0;
-    const char* str_value = (const char*)value;
-    int int_value = (int)(uintptr_t)value;
 
     if (type == ARGSPARSE_TYPE_NONE)
         return -1;
@@ -48,7 +46,7 @@ int parse_value(ARG_VALUE* ref, ARG_TYPE type, void* value)
     switch (type)
     {
         case ARGSPARSE_TYPE_FLAG:
-            ref->flagvalue = int_value != 0 ? 1 : 0;
+            ref->flagvalue = str_value ? strcmp(str_value, "0") : 0;
         break;
         case ARGSPARSE_TYPE_DOUBLE:
             ref->doublevalue = str_value ? atof(str_value) : -1.0;

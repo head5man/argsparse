@@ -10,6 +10,7 @@
 #include "iterate.h"
 #include "internal_funcs.h"
 
+#include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,15 +27,18 @@ ARG_DATA_HANDLE argsparse_create(const char* title)
 
 void argsparse_free(ARG_DATA_HANDLE handle)
 {
-    HARGPARSE_ARG_LINKED next = handle->arguments;
-    while (next)
+    if (handle)
     {
-        next = free_linked_argument(next);
+        HARGPARSE_ARG_LINKED next = handle->arguments;
+        while (next)
+        {
+            next = free_linked_argument(next);
+        }
+        free (handle);
     }
-    free (handle);
 }
 
-ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* name, const char* desc, void* value)
+ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* name, const char* desc, const char* value)
 {
     ARG_ARGUMENT_HANDLE p = create_argument(name, desc);
     p->type = type;
@@ -71,19 +75,20 @@ int argsparse_argument_count(ARG_DATA_HANDLE handle)
 
 /// @brief Add argument moves argument ownership to handle
 /// @param handle Handle to allocated arguments structure
-/// @param argument Handle to allocated argument
+/// @param href argument to take ownership of
 ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
 {
-    if (handle->count >= ARGSPARSE_MAX_ARGUMENTS)
+    if (handle->count >= ARGSPARSE_MAX_ARGS)
     {
-        // didn't take ownership
-        return ERROR_MAX_ARGUMENTS;
+        free_argument(href);
+        return ERROR_MAX_ARGS;
     }
     handle->count++;
-    ARG_ARGUMENT_HANDLE arg = *href;
     HARGPARSE_ARG_LINKED new_link = calloc(1, sizeof(t_argparse_argument_linked));
-    new_link->argument = arg;
-    generate_short_name(handle, arg);
+    new_link->argument = *href;
+    *href = NULL;
+
+    generate_short_name(handle, new_link->argument);
     if (handle->arguments)
     {
         HARGPARSE_ARG_LINKED next = handle->arguments;
@@ -95,43 +100,43 @@ ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* hr
     }
     else
         handle->arguments = new_link;
-    // take ownership
-    *href = NULL;
+
     return ERROR_NONE;
 }
 
-void argsparse_add_int(ARG_DATA_HANDLE handle, const char* option, const char* description, int value)
+ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
 {
+    char buffer[12] = { 0, };
+    const char* str_value = itoa(value, buffer, 10);
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_INT, name, description, str_value);
 
+    return argsparse_put_argument(handle, &p);
 }
 
-void argsparse_add_double(ARG_DATA_HANDLE handle, const char* option, const char* description, double value)
+ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const char* description, double value)
 {
+    char buffer[ARGSPARSE_MAX_STRING_SIZE] = { 0, };
+    snprintf(buffer, ARGSPARSE_MAX_STRING_SIZE, "%f", value);
 
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_DOUBLE, name, description, buffer);
+
+    return argsparse_put_argument(handle, &p);
 }
 
-void AddArgumentTypeOnOff(ARG_DATA_HANDLE handle, const char* option, const char* description, const char* value)
+ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const char* description, const char* value)
 {
-
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_STRING, name, description, value);
+    return argsparse_put_argument(handle, &p);
 }
 
-void argsparse_add_str(ARG_DATA_HANDLE handle, const char* option, const char* description, const char* value)
+ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
 {
+    char buffer[12] = { 0, };
+    snprintf(buffer, 12, "%d", value);
 
-}
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_FLAG, name, description, buffer);
 
-int argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
-{
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_FLAG, name, description, (void*)(uintptr_t)value);
-
-    int err = argsparse_put_argument(handle, &p);
-
-    if (p != NULL)
-    {
-        free_argument(&p);
-    }
-    
-    return err;
+    return argsparse_put_argument(handle, &p);
 }
 
 int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
@@ -151,6 +156,7 @@ int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
             // };
         /* getopt_long stores the option index here. */
         int option_index = 0;
+        optind = 0;
         iterate_arguments_return_on_zero(handle, action_do_option_long, (void*)long_options);
         int c;
         while(1)
@@ -225,10 +231,15 @@ static HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED linked)
     return next;
 }
 
+/// @brief free argument and null
+/// @param handle null-safe
 static void free_argument(ARG_ARGUMENT_HANDLE* handle)
 {
-    free(*handle);
-    *handle = NULL;
+    if (*handle)
+    {
+        free(*handle);
+        *handle = NULL;
+    }
 }
 
 ////////////////////////////////////

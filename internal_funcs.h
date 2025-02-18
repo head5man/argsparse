@@ -8,7 +8,7 @@ ARG_ARGUMENT_HANDLE create_argument(const char* name, const char* desc);
 void free_argument(ARG_ARGUMENT_HANDLE* handle);
 
 void copy_to_argument_string(char* dest, const char* source);
-int parse_value(ARG_VALUE* ref, ARG_TYPE type, void* value);
+int parse_value(ARG_VALUE* ref, ARG_TYPE type, const char* value);
 int set_short_option(char c, ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg);
 void generate_short_name(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg);
 
