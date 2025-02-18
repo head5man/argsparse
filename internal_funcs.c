@@ -14,23 +14,13 @@ void copy_to_argument_string(char* dest, const char* source)
 
 const char* find_string_end(const char* str)
 {
-    const char double_quote = '"';
-    char terminators[] = {' ', '\0', '"'};
+    char terminators[] = {'\0'};
     const char* end = NULL;
     if (str != NULL)
     {
         for (int i = 0; str && end == NULL && i < sizeof(terminators); i++)
         {
             end = strchr(str, terminators[i]);
-            
-            if (end == str && *end == double_quote)
-            {
-                // incase of starting double-quote find the ending double-quote
-                end = strchr(end + 1, double_quote);
-                // include the ending double-quote
-                if (end != NULL)
-                    end++;
-            }
         }
     }
     return end;
