@@ -8,8 +8,9 @@
 void copy_to_argument_string(char* dest, const char* source)
 {
     size_t len = strlen(source);
-    len = len < ARGSPARSE_MAX_STRING_SIZE ? len : ARGSPARSE_MAX_STRING_SIZE;
+    len = len < ARGSPARSE_MAX_STRING_SIZE ? len : ARGSPARSE_MAX_STRING_SIZE - 1;
     strncpy(dest, source, len);
+    dest[len] = '\0';
 }
 
 const char* find_string_end(const char* str)
