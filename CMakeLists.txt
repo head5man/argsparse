@@ -5,6 +5,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake/argsparse-lib.cmake)
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test)
 
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/example)
+
 # set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
 # set(CMAKE_CXX_STANDARD 17)
