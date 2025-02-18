@@ -13,6 +13,7 @@ include_directories(${CMAKE_CURRENT_LIST_DIR}/..)
 list(APPEND SourceFiles
     ${CMAKE_CURRENT_LIST_DIR}/TestMain.cpp
     ${CMAKE_CURRENT_LIST_DIR}/argsparseTests.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tokenize.c
 )
 
 # Test executable
