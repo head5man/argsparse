@@ -28,13 +28,9 @@ int main(int argc, char **argv)
     err_print(err, "flag not added");
 
     int parsed = argsparse_parse_args(arguments, argv, argc);
-    printf("shortopts %s - %d arguments parsed\n", argsparse_get_shortopts(arguments), parsed);
-    ARG_ARGUMENT_HANDLE arg = NULL;
-    arg = argsparse_argument_by_short_name(arguments, 'i');
-    arg_print(arg);
+    printf("%d arguments parsed\n", parsed);
 
-    arg = argsparse_argument_by_short_name(arguments, 's');
-    arg_print(arg);
+    argsparse_usage(arguments, argv[0]);
 }
 
 int err_print(ARG_ERROR err, const char* message)

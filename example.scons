@@ -1,0 +1,34 @@
+import sys
+sys.path.append("./SCons")
+from SCons.Script import *
+# Skip initializing any tools in the DefaultEnvironment 
+# as we're not using it.
+import scons_compiledb
+DefaultEnvironment(tools=[])
+
+env=Environment(
+    LIBPATH=['./'],
+    CPPPATH=['./', './Getopt-for-Visual-Studio']
+)
+
+scons_compiledb.enable(env)
+
+libname = 'argsparse'
+
+env.StaticLibrary(
+    target = libname,
+    source = ['argsparse.c', 'internal_funcs.c'])
+    
+# We list the library by it's base name 'a' and not a.dll, or liba.a because SCons
+# will expand this to the appropriate platform/compiler dependent file name 
+# and use the correct arguments to the linker to link against the shared library 'a'
+# NOTE: We use LIBS here instead of env['LIBS']=['a'] as we're also building the
+#       shared library above with the same Environment().
+#       Having env.Prepend(LIBS=['a']) would cause the SharedLibrary() above to ALSO
+#       try to link against shared library a. (Or on win32 file 'a.lib') and fail.
+env.Program(
+    target = 'argsparse-example',
+    source = './example/example.c',
+    LIBS=[libname,])
+
+env.CompileDb()
