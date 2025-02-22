@@ -113,7 +113,7 @@ TEST_F(TEST_FIXTURE, ShouldAppendShortOptions)
 
     ARG_ARGUMENT_HANDLE harg = argsparse_create_argument_with_value(ARG_TYPE::ARGSPARSE_TYPE_INT, "integer", "description", NULL);
     argsparse_put_argument(gHandle, &harg);
-    ASSERT_STREQ("f:", shortopts);
+    ASSERT_STREQ("i:", shortopts);
 }
 
 TEST_F(TEST_FIXTURE, ShouldAddManyArguments)
