@@ -145,6 +145,34 @@ TEST_F(TEST_FIXTURE, ShouldAddManyArguments)
     ASSERT_EQ(ARGSPARSE_MAX_ARGS, argsparse_argument_count(gHandle));
 }
 
+TEST_F(TEST_FIXTURE, ParsesAllOptionTypes)
+{
+    int flgValue = 0;
+    const char* strExpected = "new_value";
+    double dblExpected = 4321.4321;
+    int flgExpected = 1234;
+    int intExpected = 4321;
+
+    gHandle = argsparse_create(NULL);
+    argsparse_add_cstr(gHandle, "string", "", "This is the initial value");
+    argsparse_add_double(gHandle, "double", "", 1234.1234);
+    argsparse_add_flag(gHandle, "flag", "", flgExpected, &flgValue);
+    argsparse_add_int(gHandle, "integer", "", 1234);
+    const char* fmt = "prg --string %s --double %f --flag --integer %d";
+    sprintf(gBuffer, fmt, strExpected, dblExpected, intExpected);
+    tokenise_to_argc_argv(gBuffer, &gArgc, gArgv, ARGV_SIZE, print_arguments);
+    ASSERT_EQ(4, argsparse_parse_args(gHandle, gArgv, gArgc));
+
+    ARG_ARGUMENT_HANDLE arg;
+    arg = argsparse_argument_by_name(gHandle, "string");
+    ASSERT_STREQ("new_value", arg->value.stringvalue);
+    arg = argsparse_argument_by_name(gHandle, "double");
+    ASSERT_DOUBLE_EQ(dblExpected, arg->value.doublevalue);
+    ASSERT_EQ(flgExpected, flgValue);
+    arg = argsparse_argument_by_name(gHandle, "integer");
+    ASSERT_EQ(intExpected, arg->value.intvalue);
+}
+
 TEST_F(TEST_FIXTURE, ShouldParseOptionLongFlag)
 {
     int argc = 0;
