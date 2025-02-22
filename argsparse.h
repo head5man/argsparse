@@ -144,9 +144,13 @@ ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* option, const c
 /// @param argc 
 int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const* argv, int argc);
 
-/// @brief Prints all arguments in usage message
+/// @brief Prints usage message
 /// @param handle 
-void argsparse_usage(ARG_DATA_HANDLE handle, const char* const executable);
+void argsparse_show_usage(ARG_DATA_HANDLE handle, const char* const executable);
+
+/// @brief Prints argument values
+/// @param handle 
+void argsparse_show_arguments(ARG_DATA_HANDLE handle);
 
 const char* argsparse_get_title(ARG_DATA_HANDLE handle);
 char* argsparse_get_shortopts(ARG_DATA_HANDLE handle);

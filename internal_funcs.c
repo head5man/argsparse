@@ -6,20 +6,22 @@
 #include <malloc.h>
 #include <string.h>
 
-const char* get_expected_argument_type(ARG_TYPE type)
+const char* get_argument_type_string(ARG_TYPE type)
 {
     switch (type)
     {
         case ARGSPARSE_TYPE_DOUBLE:
-            return ":dbl";
+            return "dbl";
+        case ARGSPARSE_TYPE_NONE:
+            return "nul";
         case ARGSPARSE_TYPE_FLAG:
-            return "none";
+            return "flg";
         case ARGSPARSE_TYPE_INT:
-            return ":int";
+            return "int";
         case ARGSPARSE_TYPE_STRING:
-            return ":str";
+            return "str";
         default:
-            return ":wtf";
+            return "wtf";
     }
 }
 

@@ -401,16 +401,18 @@ TEST_F(TEST_FIXTURE, UsageOutput)
     const char* const executable = "\\some\\path\\test.exe";
     const char* expected =
     "usage: test.exe [-s]\n"
-    "Title\n"
+    "title: Title\n"
     "optional arguments:\n"
-    "-s, --string [:str] This is a string\n"
-    "  def: defvalue\n";
+    "-s, --string\n"
+    "    desc: This is a string\n"
+    "    args: [str:defvalue]\n"
+    "\n";
 
     gHandle = argsparse_create("Title");
 
     argsparse_add_cstr(gHandle, "string", "This is a string", "defvalue");
     ::testing::internal::CaptureStdout();
-    argsparse_usage(gHandle, executable);
+    argsparse_show_usage(gHandle, executable);
     std::string output = ::testing::internal::GetCapturedStdout();
     ASSERT_STREQ(expected, output.c_str());
 }

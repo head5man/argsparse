@@ -240,7 +240,7 @@ int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
     return count;
 }
 
-void argsparse_usage(ARG_DATA_HANDLE handle, const char* const executable)
+void argsparse_show_usage(ARG_DATA_HANDLE handle, const char* const executable)
 {
     // is there a separator?
     const char* separator = strrchr(executable, '/') ? strrchr(executable, '/') : strrchr(executable, '\\');
@@ -258,12 +258,19 @@ void argsparse_usage(ARG_DATA_HANDLE handle, const char* const executable)
 
         printf(" [-%c]", c);
     }
-    printf("\n%s\n", handle->title);
+    printf("\ntitle: %s\n", handle->title);
 
     printf("optional arguments:\n");
+
+    iterate_arguments_return_on_zero(handle, action_show_argument_usage, NULL);
+}
+
+void argsparse_show_arguments(ARG_DATA_HANDLE handle)
+{
+    printf("argument values:\n");
     size_t width = 0;
     iterate_arguments_return_on_zero(handle, action_long_option_width, &width);
-    iterate_arguments_return_on_zero(handle, action_argument_usage, (void*)(uintptr_t)width);
+    iterate_arguments_return_on_zero(handle, action_show_argument_value, (void*)(uintptr_t)width);
 }
 
 ////////////////////////
@@ -345,15 +352,41 @@ static int action_long_option_width(int idx, ARG_ARGUMENT_HANDLE arg, void* data
     return 1;
 }
 
-static int action_argument_usage(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+static int action_show_argument_usage(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
 {
     char buffer[ARGSPARSE_MAX_STRING_SIZE] = {0,};
-    int width = (int)(uintptr_t)data;
-    //-<shortopt>, --<longopt> [argtype] <description>
     printf("-%c, ", arg->name_short);
-    printf("--%-*s ", width, arg->name);
-    printf("[%s] %s\n", get_expected_argument_type(arg->type), arg->description);
-    printf("  def: %s\n", get_argument_value_string(arg, buffer, ARGSPARSE_MAX_STRING_SIZE));
+    printf("--%s\n", arg->name);
+    printf("    desc: %s\n", arg->description);
+    if (arg->type != ARGSPARSE_TYPE_NONE)
+    {
+        printf("    args: [%s", get_argument_type_string(arg->type));
+        printf(":%s", get_argument_value_string(arg, buffer, ARGSPARSE_MAX_STRING_SIZE));
+        printf("]\n");
+    }
+    printf("\n");
+    return 1;
+}
+
+static int action_show_argument_value(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
+{
+    char buffer[ARGSPARSE_MAX_STRING_SIZE] = {0,};
+    if (arg->type != ARGSPARSE_TYPE_NONE)
+    {
+        size_t width = (uintptr_t)(data);
+        if (width != 0 && width < 20)
+        {
+            printf("    %*s: ", (int)width, arg->name);
+        }
+        else
+        {
+            printf("    %s: ", arg->name);
+        }
+
+        printf("[%s]", get_argument_type_string(arg->type));
+        printf(" %s", get_argument_value_string(arg, buffer, ARGSPARSE_MAX_STRING_SIZE));
+        printf("\n");
+    }
     return 1;
 }
 
