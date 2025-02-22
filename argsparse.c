@@ -147,68 +147,78 @@ ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const cha
 int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
 {
     int count = 0;
+    // Although application call this function only once,
+    // tests call this function many times and optind has to be reset.
+    // https://github.com/skandhurkat/Getopt-for-Visual-Studio/blob/6567b18432b1b4dc0e71f71b8601df28c1ac09f8/getopt.h#L80
+    optind = 1;
     if (argc > 1)
     {
-        struct option *long_options = calloc(argc, sizeof(struct option));
-            // {
-            //   /* These options set a flag. */
-            //   {"verbose", no_argument,       &verbose_flag, 1},
-            //   {"brief",   no_argument,       &verbose_flag, 0},
-            //   /* These options don’t set a flag.
-            //      We distinguish them by their indices. */
-            //   {"file",    required_argument, 0, 'f'},
-            //   {0, 0, 0, 0}
-            // };
-        /* getopt_long stores the option index here. */
-        int option_index = 0;
-        optind = 0;
-        iterate_arguments_return_on_zero(handle, action_do_option_long, (void*)(long_options + 1));
-        int c = 0;
-        while(c != -1)
+        int arg_count = argsparse_argument_count(handle);
+        struct option *long_options = calloc(arg_count + 1, sizeof(struct option));
+
+        if (long_options != NULL)
         {
-            c = getopt_long(argc, argv,
-                            handle->shortopts,
-                            (const struct option *)long_options,
-                            &option_index);
-
-
-            switch (c)
+            int c = 0;
+            iterate_arguments_return_on_zero(handle, action_do_option_long, (void*)(long_options));
+            while(c != -1)
             {
-                /* Detect the end of the options. */
-                case -1:
-                    continue;
+                /* getopt_long stores the option index here (long_options[option_index]). */
+                int option_index = 0;
+                c = getopt_long(argc, argv,
+                                handle->shortopts,
+                                (const struct option *)long_options,
+                                &option_index);
+                printf("option_index(%d), optind(%d)\n", option_index, optind);
 
-                /* opt->flag */
-                case 0:
-                    count++;
-                    continue;
+                switch (c)
+                {
+                    /* Detect the end of the options. */
+                    case -1:
+                        break;
 
-                case 'h':
-                    argsparse_usage(handle, argv[0]);
-                    exit(0);
+                    /* opt->flag */
+                    case 0:
+                        printf ("flag -%c\n", c);
+                        count++;
+                        break;
 
-                default:
-                    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_short_name(handle, c);
-                    if (arg == NULL)
-                    {
-                        printf ("invalid option -%c\n", c);
-                        argsparse_usage(handle, argv[0]);
-                        exit(1);
-                    }
-                    else
-                    {
-                        int err = parse_value(&arg->value, arg->type, optarg);
-                        if (!err)
+                    case 'h':
+                        argsparse_show_usage(handle, argv[0]);
+                        exit(0);
+
+                    default:
+                        printf ("option -%c\n", c);
+                        ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_short_name(handle, c);
+                        if (arg == NULL)
                         {
-                            arg->parsed = 1;
-                            count++;
+                            printf ("invalid option -%c\n", c);
+                            argsparse_show_usage(handle, argv[0]);
+                            exit(1);
                         }
-                    }
-                    break;
+                        else
+                        {
+                            int err = parse_value(&arg->value, arg->type, optarg);
+                            if (!err)
+                            {
+                                printf("parsed %s\n", optarg);
+                                arg->parsed = 1;
+                                count++;
+                            }
+                        }
+                        break;
+                }
             }
+
+            if (optind < argc) {
+                printf("non-option ARGV-elements: ");
+                while (optind < argc)
+                    printf("%s ", argv[optind++]);
+
+                printf("\n");
+            }
+            iterate_arguments_return_on_zero(handle, action_mark_parsed_flags, NULL);
+            free(long_options);
         }
-        free(long_options);
-        iterate_arguments_return_on_zero(handle, action_mark_parsed_flags, NULL);
     }
     return count;
 }
