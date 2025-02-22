@@ -307,7 +307,7 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionShortString)
     int argc = 0;
     const char* defvalue = "1234.4321";
     const char* expvalue = "4321.1234";
-    sprintf(gBuffer, "program --s=""4321.1234");
+    sprintf(gBuffer, "%s%s", "program -s ", expvalue);
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
     gHandle = argsparse_create(NULL);
@@ -317,7 +317,7 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionShortString)
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
     ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
-    ASSERT_EQ(0, strncmp(expvalue, arg->value.stringvalue, strlen(expvalue)));
+    ASSERT_STREQ(expvalue, arg->value.stringvalue);
 }
 
 TEST_F(TEST_FIXTURE, ShouldParseOptionLongString1)
@@ -325,7 +325,7 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongString1)
     int argc = 0;
     const char* defvalue = "1234.4321";
     const char* expvalue = "4321.1234";
-    sprintf(gBuffer, "program --string=""4321.1234");
+    sprintf(gBuffer, "%s%s", "program --string=", expvalue);
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
     gHandle = argsparse_create(NULL);
@@ -335,7 +335,7 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongString1)
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
     ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
-    ASSERT_EQ(0, strncmp(expvalue, arg->value.stringvalue, strlen(expvalue)));
+    ASSERT_STREQ(expvalue, arg->value.stringvalue);
 }
 
 TEST_F(TEST_FIXTURE, ShouldParseOptionLongString2)
@@ -343,7 +343,7 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongString2)
     int argc = 0;
     const char* defvalue = "1234.4321";
     const char* expvalue = "4321.1234";
-    sprintf(gBuffer, "program --string ""4321.1234");
+    sprintf(gBuffer, "%s%s", "program --string ", "4321.1234");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
     gHandle = argsparse_create(NULL);
@@ -438,6 +438,7 @@ TEST_P(TEST_FIXTURE, ShouldInitializeValue)
     ASSERT_EQ(0, argsparse_argument_count(gHandle));
 
     ARG_ARGUMENT_HANDLE h = argsparse_create_argument_with_value(param.Type, "flag", "This is an argument", &(param.Value));
+
     argsparse_put_argument(gHandle, &h);
     ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "flag");
     ARG_VALUE value = arg->value;
