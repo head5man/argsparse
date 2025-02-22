@@ -81,9 +81,6 @@ int argsparse_argument_count(ARG_DATA_HANDLE handle)
     return ret;
 }
 
-/// @brief Add argument moves argument ownership to handle
-/// @param handle Handle to allocated arguments structure
-/// @param href argument to take ownership of
 ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
 {
     ARG_ARGUMENT_HANDLE exists = iterate_arguments_return_on_zero(handle, predicate_compare_name, (*href)->name);

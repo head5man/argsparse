@@ -80,63 +80,71 @@ ARG_DATA_HANDLE argsparse_create(const char* title);
 /// @return handle
 void argsparse_free(ARG_DATA_HANDLE handle);
 
-ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* option, const char* desc, ARG_VALUE* value);
+ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* name, const char* description, ARG_VALUE* value);
 
 /// @brief Add argument moves argument ownership to handle
 /// @param handle Handle to allocated arguments structure
 /// @param argument Handle to allocated argument
-/// @return 0 - success, !0 - arg not consumed
+/// @return
+/// ERROR_NONE(0) - success
+///
+/// ERROR_EXISTS - argument with same name already exists
+///
+/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* argument);
 
 /// @brief Add int argument
-/// @param handle Handle to allocated arguments structure
-/// @param option Option cmdline flag
-/// @param description Description of argument
-/// @param value Default value
+/// @param handle allocated arguments structure handle
+/// @param name argument name
+/// @param desc argument description
+/// @param value argument value (default)
 /// @return
 /// ERROR_NONE(0) - success
 ///
+/// ERROR_EXISTS - argument with same name already exists
+///
 /// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* option, const char* description, int value);
+ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char* desc, int value);
 
 /// @brief Add DOUBLE argument
-/// @param handle Handle to allocated arguments structure
-/// @param option Option cmdline flag
-/// @param description Description of argument
-/// @param value Default value
+/// @param handle allocated arguments structure handle
+/// @param name argument name
+/// @param description argument description
+/// @param value argument value (default)
 /// @return
 /// ERROR_NONE(0) - success
 ///
+/// ERROR_EXISTS - argument with same name already exists
+///
 /// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* option, const char* description, double value);
+ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const char* description, double value);
 
 /// @brief Add string argument
-/// @param handle Handle to allocated arguments structure
-/// @param option Option cmdline flag
-/// @param description Description of argument
-/// @param value Default value
+/// @param handle allocated arguments structure handle
+/// @param name argument name
+/// @param description argument description
+/// @param value argument value (default)
 /// @return
 /// ERROR_NONE(0) - success
 ///
+/// ERROR_EXISTS - argument with same name already exists
+///
 /// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* option, const char* description, const char* value);
+ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const char* description, const char* value);
 
 /// @brief Add argument flag only
 /// @param handle allocated arguments structure handle
 /// @param name argument name
-/// @param desc argument description
+/// @param description argument description
 /// @param value Value to set when option present
 /// @param ptr_to_value pointer to value or null
 /// @return
 /// ERROR_NONE(0) - success
+///
 /// ERROR_EXISTS - argument with same name already exists
-/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-
-/// @return
-/// ERROR_NONE(0) - success
 ///
 /// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* option, const char* description, int value, int* ptr_to_value);
+ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value, int* ptr_to_value);
 
 /// @brief Parse cmdline argument against added arguments 
 /// @param handle Handle to allocated arguments structure
