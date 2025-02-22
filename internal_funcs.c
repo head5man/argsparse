@@ -29,7 +29,7 @@ const char* get_argument_value_string(ARG_ARGUMENT_HANDLE arg, char* buffer, siz
     {
         case ARGSPARSE_TYPE_FLAG:
             // flag
-            snprintf(buffer, buflen, "%d", arg->value.flagvalue);
+            snprintf(buffer, buflen, "%d:%d", *(arg->value.flagptr), arg->flag_init.flagvalue);
             break;
         case ARGSPARSE_TYPE_INT:
             // integer
@@ -79,8 +79,8 @@ int parse_value(ARG_VALUE* ref, ARG_TYPE type, const char* str_value)
     switch (type)
     {
         case ARGSPARSE_TYPE_FLAG:
-            ref->flagvalue = str_value ? strcmp(str_value, "0") : 0;
-        break;
+            // getopt_long already set the option.val to option.flag
+            break;
         case ARGSPARSE_TYPE_DOUBLE:
             ref->doublevalue = str_value ? atof(str_value) : -1.0;
         break;
@@ -130,7 +130,7 @@ int set_short_option(char c, ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg)
     if (*used == 0)
     {
         *used = c;
-        *(used + 1) = (arg->type == ARGSPARSE_TYPE_FLAG) ? 0 : ':';
+        *(used + 1) = (arg->type == ARGSPARSE_TYPE_FLAG) || (arg->type == ARGSPARSE_TYPE_NONE) ? 0 : ':';
         arg->name_short = c;
         ret = 0;
     }
@@ -139,6 +139,9 @@ int set_short_option(char c, ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg)
 
 void generate_short_name(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg)
 {
+    if (arg->type == ARGSPARSE_TYPE_FLAG)
+        return;
+
     char* longname = arg->name;
     char c;
     // iterate characters of longname as long as necessary

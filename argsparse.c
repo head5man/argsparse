@@ -43,7 +43,14 @@ ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const ch
     ARG_ARGUMENT_HANDLE p = create_argument(name, desc);
     p->type = type;
     if (value)
+    {
         memcpy(&p->value, value, sizeof(ARG_VALUE));
+        // if no pointer given point to the unused ARG_VALUE memory
+        if (type == ARGSPARSE_TYPE_FLAG && p->value.flagptr == NULL)
+        {
+            p->value.flagptr = (int*)(&p->value.flagptr + 1);
+        }
+    }
     return p;
 }
 
@@ -134,13 +141,12 @@ ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const cha
     return argsparse_put_argument(handle, &p);
 }
 
-ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
+ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value, int* ptr_to_value)
 {
-    ARG_VALUE argvalue;
-    argvalue.flagvalue = value == 0 ? 0 : 1;
-
+    ARG_VALUE argvalue = {0, };
+    argvalue.flagptr = ptr_to_value;
     ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_FLAG, name, description, &argvalue);
-
+    p->flag_init.flagvalue = value;
     return argsparse_put_argument(handle, &p);
 }
 
@@ -315,8 +321,8 @@ static int action_do_option_long(int idx, ARG_ARGUMENT_HANDLE arg, void* data)
     struct option* options = (struct option*)data;
     options[idx].name = arg->name;
     options[idx].has_arg = arg->type != ARGSPARSE_TYPE_NONE && arg->type != ARGSPARSE_TYPE_FLAG;
-    options[idx].val = arg->name_short;
-    options[idx].flag = (arg->type == ARGSPARSE_TYPE_FLAG) ? &(arg->value.flagvalue) : NULL;
+    options[idx].val = (arg->type == ARGSPARSE_TYPE_FLAG) ? arg->flag_init.flagvalue : arg->name_short;
+    options[idx].flag = (arg->type == ARGSPARSE_TYPE_FLAG) ? arg->value.flagptr : NULL;
     return 1;
 }
 
@@ -353,10 +359,9 @@ static int action_mark_parsed_flags(int idx, ARG_ARGUMENT_HANDLE arg, void* data
     if (arg && arg->type == ARGSPARSE_TYPE_FLAG)
     {
         // flag value was set by getopts_long
-        if (arg->value.flagvalue == arg->name_short)
+        if (*arg->value.flagptr == arg->flag_init.flagvalue)
         {
             arg->parsed = 1;
-            arg->value.flagvalue = 1;
         }
     }
     return 1;

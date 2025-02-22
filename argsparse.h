@@ -43,7 +43,7 @@ typedef enum _argsparse_type {
 typedef union _argparse_value
 {
     char stringvalue[ARGSPARSE_MAX_STRING_SIZE];
-    int flagvalue;
+    int* flagptr;
     int intvalue;
     double doublevalue;
 } argsparse_value_t;
@@ -57,6 +57,10 @@ typedef struct _argparse_argument
     int name_short;
     char name[ARGSPARSE_MAX_STRING_SIZE];
     char description[ARGSPARSE_MAX_STRING_SIZE];
+    union {
+        int flagvalue;
+        ARG_VALUE initvalue;
+    } flag_init;
     ARG_VALUE value;
 } argsparse_argument_t;
 
@@ -74,8 +78,6 @@ ARG_DATA_HANDLE argsparse_create(const char* title);
 /// @param title 
 /// @return handle
 void argsparse_free(ARG_DATA_HANDLE handle);
-
-ARG_ARGUMENT_HANDLE argsparse_create_argument(const char* option, const char* desc);
 
 ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* option, const char* desc, ARG_VALUE* value);
 
@@ -119,14 +121,21 @@ ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* option, const
 ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* option, const char* description, const char* value);
 
 /// @brief Add argument flag only
-/// @param handle Handle to allocated arguments structure
-/// @param option Option cmdline flag
-/// @param description Description of argument
+/// @param handle allocated arguments structure handle
+/// @param name argument name
+/// @param desc argument description
+/// @param value Value to set when option present
+/// @param ptr_to_value pointer to value or null
+/// @return
+/// ERROR_NONE(0) - success
+/// ERROR_EXISTS - argument with same name already exists
+/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+
 /// @return
 /// ERROR_NONE(0) - success
 ///
 /// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* option, const char* description, int value);
+ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* option, const char* description, int value, int* ptr_to_value);
 
 /// @brief Parse cmdline argument against added arguments 
 /// @param handle Handle to allocated arguments structure

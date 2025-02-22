@@ -34,6 +34,7 @@ int gArgc = 0;
 
 class TestParams
 {
+    int _flagValue = 0;
 public:
     static const TestParams StringType;
     static const TestParams IntType;
@@ -58,6 +59,12 @@ public:
         Value.intvalue = value;
     }
 
+    TestParams(ARG_TYPE type, int* value)
+    {
+        Type = type;
+        Value.flagptr = value != nullptr ? value : &_flagValue;
+    }
+
     ARG_TYPE Type;
     ARG_VALUE Value;
 };
@@ -65,7 +72,7 @@ public:
 const TestParams TestParams::StringType(ARGSPARSE_TYPE_STRING, "1234");
 const TestParams TestParams::DoubleType(ARGSPARSE_TYPE_DOUBLE, 1234.1);
 const TestParams TestParams::IntType(ARGSPARSE_TYPE_INT, 1234);
-const TestParams TestParams::FlagType(ARGSPARSE_TYPE_FLAG, 1);
+const TestParams TestParams::FlagType(ARGSPARSE_TYPE_FLAG, (int*)nullptr);
 
 class TEST_FIXTURE:public ::testing::TestWithParam<TestParams>
 {
@@ -141,17 +148,19 @@ TEST_F(TEST_FIXTURE, ShouldAddManyArguments)
 TEST_F(TEST_FIXTURE, ShouldParseOptionLongFlag)
 {
     int argc = 0;
+    int value = 0;
+    int expected = 1234;
     sprintf(gBuffer, "program --flag");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
     gHandle = argsparse_create(NULL);
-    argsparse_add_flag(gHandle, "flag", "This is a flag", 0);
+    argsparse_add_flag(gHandle, "flag", "This is a flag", expected, &value);
     
     ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
 
     ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "flag");
     ASSERT_EQ(1, arg->parsed);
-    ASSERT_NE(0, arg->value.flagvalue);
+    ASSERT_EQ(expected, *arg->value.flagptr);
 }
 
 TEST_F(TEST_FIXTURE, ShouldParseOptionLongInt)
@@ -390,7 +399,7 @@ TEST_P(TEST_FIXTURE, ShouldInitializeValue)
     switch (param.Type)
     {
         case ARGSPARSE_TYPE_FLAG:
-            ASSERT_EQ(value.flagvalue, param.Value.flagvalue);
+            ASSERT_EQ(value.flagptr, param.Value.flagptr);
         break;
         case ARGSPARSE_TYPE_STRING:
             ASSERT_STREQ(value.stringvalue, param.Value.stringvalue);
