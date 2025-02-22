@@ -93,6 +93,16 @@ ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const ch
 /// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* argument);
 
+/// @brief Add help option showing usage with exit
+/// @param handle allocated arguments structure handle
+/// @return
+/// ERROR_NONE(0) - success
+///
+/// ERROR_EXISTS - argument with same name already exists
+///
+/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+ARG_ERROR argsparse_add_help(ARG_DATA_HANDLE handle);
+
 /// @brief Add int argument
 /// @param handle allocated arguments structure handle
 /// @param name argument name

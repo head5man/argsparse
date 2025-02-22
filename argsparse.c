@@ -120,6 +120,12 @@ ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* hr
     return ERROR_NONE;
 }
 
+ARG_ERROR argsparse_add_help(ARG_DATA_HANDLE handle)
+{
+    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_NONE, "help", "Print this message", NULL);
+    return argsparse_put_argument(handle, &p);
+}
+
 ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
 {
     ARG_VALUE argvalue;
