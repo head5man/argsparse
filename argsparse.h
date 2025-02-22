@@ -26,6 +26,7 @@ typedef enum _argsparse_errors {
     ERROR_NONE = 0,
     ERROR_UNKNOWN = -1,
     ERROR_MAX_ARGS = -2,
+    ERROR_EXISTS = -3,
 } e_argsparse_errors;
 
 typedef enum _argsparse_type {

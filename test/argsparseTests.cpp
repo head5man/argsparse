@@ -123,6 +123,21 @@ TEST_F(TEST_FIXTURE, ShouldAppendShortOptions)
     ASSERT_STREQ("i:", shortopts);
 }
 
+TEST_F(TEST_FIXTURE, ShouldNotAppendSameOption)
+{
+    gHandle = argsparse_create(NULL);
+    char* shortopts = argsparse_get_shortopts(gHandle);
+    ASSERT_EQ(0, *shortopts);
+
+    ARG_ARGUMENT_HANDLE harg = argsparse_create_argument_with_value(ARG_TYPE::ARGSPARSE_TYPE_INT, "integer", "description", NULL);
+    argsparse_put_argument(gHandle, &harg);
+    ASSERT_THAT(harg, IsNull());
+    harg = argsparse_create_argument_with_value(ARG_TYPE::ARGSPARSE_TYPE_INT, "integer", "description", NULL);
+    ARG_ERROR err = argsparse_put_argument(gHandle, &harg);
+    ASSERT_EQ(ERROR_EXISTS, err);
+    ASSERT_STREQ("i:", shortopts);
+}
+
 TEST_F(TEST_FIXTURE, ShouldAddManyArguments)
 {
     ARG_ERROR err = ERROR_NONE;
