@@ -3,9 +3,11 @@
 
 #include "internal_types.h"
 
-ARG_ARGUMENT_HANDLE create_argument(ARG_TYPE type, const char* name, const char* description, const ARG_VALUE* value);
-void free_argument(ARG_ARGUMENT_HANDLE* handle);
-HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED arg);
+#include <stddef.h>
+
+static ARG_ARGUMENT_HANDLE create_argument(ARG_TYPE type, const char* name, const char* description, const ARG_VALUE* value);
+static void free_argument(ARG_ARGUMENT_HANDLE* handle);
+static HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED arg);
 
 /// @brief Add argument moves argument ownership to handle
 /// @param handle Handle to allocated arguments structure
@@ -16,7 +18,7 @@ HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED arg);
 /// ERROR_EXISTS - argument with same name already exists
 ///
 /// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* argument);
+static ARG_ERROR put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* argument);
 
 void copy_to_argument_string(char* dest, const char* source);
 int parse_value(ARG_VALUE* ref, ARG_TYPE type, const char* value);

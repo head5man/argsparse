@@ -7,15 +7,16 @@
  * 
  */
 
-#include "iterate.h"
 #include "internal_funcs.h"
+#include "iterate.h"
 
 #include <float.h>
+#include <getopt.h>
+#include <malloc.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
-#include <getopt.h>
 
 ARG_DATA_HANDLE argsparse_create(const char* title) 
 {
