@@ -116,27 +116,55 @@ int parse_value(ARG_VALUE* ref, ARG_TYPE type, const char* str_value)
 
 int set_short_option(char c, ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg)
 {
-    int ret = -1;
-    char* used = handle->shortopts;
+    int ret = ERROR_EXISTS;
+    char* opt = handle->shortopts;
     // iterate used until terminating 0
-    while (*used)
+    while (*opt)
     {
-        // used - break the loop and move to next longname character
-        if (*used == c)
+        if (*opt != ':' && *opt == c)
         {
             break;
         }
-        used++;
+        opt++;
     }
     // unused - set value and break
-    if (*used == 0)
+    if (*opt == 0)
     {
-        *used = c;
-        *(used + 1) = (arg->type == ARGSPARSE_TYPE_FLAG) || (arg->type == ARGSPARSE_TYPE_NONE) ? 0 : ':';
+        *opt = c;
+        if ((arg->type == ARGSPARSE_TYPE_FLAG) || (arg->type == ARGSPARSE_TYPE_NONE))
+        {
+            *(opt + 1) = '\0';
+        }
+        else
+        {
+            *(opt + 1) = ':';
+            *(opt + 2) = '\0';
+        }
         arg->name_short = c;
-        ret = 0;
+        ret = ERROR_NONE;
     }
+
     return ret;
+}
+
+char iterate_set_of_chars_for_short(const char* sopts, const char* charset)
+{
+    if (charset != NULL && sopts != NULL)
+    {
+        size_t sopts_len = strlen(sopts);
+        while (*charset)
+        {
+            char c = *charset;
+            char* used = sopts_len <= 0 ? NULL : strchr(sopts, c);
+            if (used == NULL)
+            {
+                // found unused char
+                return c;
+            }
+            charset++;
+        }
+    }
+    return 0;
 }
 
 void generate_short_name(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg)
@@ -145,30 +173,11 @@ void generate_short_name(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg)
         return;
 
     char* longname = arg->name;
-    char c;
-    // iterate characters of longname as long as necessary
-    while(c = *longname)
+    char shortopt = iterate_set_of_chars_for_short(handle->shortopts, longname);
+    if (shortopt == '\0')
     {
-        if (set_short_option(c, handle, arg))
-        {
-            longname++;
-            continue;
-        }
-        break;
+        shortopt = iterate_set_of_chars_for_short(handle->shortopts, "abcdefghiklmnopqrstuvwxyz");
     }
-    // none of the longname characters accepted
-    if (!c)
-    {
-        // iterate characters from 'a' until the short option is set
-        c = 'a';
-        while (1)
-        {
-            if (set_short_option(c, handle, arg))
-            {
-                c++;
-                continue;
-            }
-            break;
-        }
-    }
+
+    set_short_option(shortopt, handle, arg);
 }
