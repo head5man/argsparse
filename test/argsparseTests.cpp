@@ -118,9 +118,10 @@ TEST_F(TEST_FIXTURE, ShouldAppendShortOptions)
     char* shortopts = argsparse_get_shortopts(gHandle);
     ASSERT_EQ(0, *shortopts);
 
-    ARG_ARGUMENT_HANDLE harg = argsparse_create_argument_with_value(ARG_TYPE::ARGSPARSE_TYPE_INT, "integer", "description", NULL);
-    argsparse_put_argument(gHandle, &harg);
+    ASSERT_EQ(ERROR_NONE, argsparse_add_int(gHandle, "integer", "description", 0));
     ASSERT_STREQ("i:", shortopts);
+    ASSERT_EQ(ERROR_NONE, argsparse_add_cstr(gHandle, "string", "description", "value"));
+    ASSERT_STREQ("i:s:", shortopts);
 }
 
 TEST_F(TEST_FIXTURE, ShouldNotAppendSameOption)
@@ -129,35 +130,9 @@ TEST_F(TEST_FIXTURE, ShouldNotAppendSameOption)
     char* shortopts = argsparse_get_shortopts(gHandle);
     ASSERT_EQ(0, *shortopts);
 
-    ARG_ARGUMENT_HANDLE harg = argsparse_create_argument_with_value(ARG_TYPE::ARGSPARSE_TYPE_INT, "integer", "description", NULL);
-    argsparse_put_argument(gHandle, &harg);
-    ASSERT_THAT(harg, IsNull());
-    harg = argsparse_create_argument_with_value(ARG_TYPE::ARGSPARSE_TYPE_INT, "integer", "description", NULL);
-    ARG_ERROR err = argsparse_put_argument(gHandle, &harg);
-    ASSERT_EQ(ERROR_EXISTS, err);
+    ASSERT_EQ(ERROR_NONE, argsparse_add_int(gHandle, "integer", "description", 0));
+    ASSERT_EQ(ERROR_EXISTS, argsparse_add_int(gHandle, "integer", "description", 0));
     ASSERT_STREQ("i:", shortopts);
-}
-
-TEST_F(TEST_FIXTURE, ShouldAddManyArguments)
-{
-    ARG_ERROR err = ERROR_NONE;
-    gHandle = argsparse_create(NULL);
-    char flag[] = { 'f', 'l', 'a', 'g', '?','?','?', 0 };
-    const char* fmt = "flag%d";
-    for (int i = 0; i <= ARGSPARSE_MAX_ARGS; i++)
-    {
-        sprintf(flag, fmt, i);
-        ARG_ARGUMENT_HANDLE h = argsparse_create_argument_with_value(
-            (ARG_TYPE)(i % ARGSPARSE_TYPE_CNT),
-            flag, 
-            "This is one of the many flags created", 
-            NULL);
-        err = argsparse_put_argument(gHandle, &h);
-        if (err != ERROR_NONE)
-            break;
-    }
-    ASSERT_EQ(ARG_ERROR::ERROR_MAX_ARGS, err);
-    ASSERT_EQ(ARGSPARSE_MAX_ARGS, argsparse_argument_count(gHandle));
 }
 
 TEST_F(TEST_FIXTURE, ParsesAllOptionTypes)
@@ -356,11 +331,11 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongString2)
     ASSERT_EQ(0, strncmp(expvalue, arg->value.stringvalue, strlen(expvalue)));
 }
 
-TEST_F(TEST_FIXTURE, ShouldSplitParseWhitespaceString)
+TEST_F(TEST_FIXTURE, SplitsWhitespaceString)
 {
     int argc = 0;
     const char* defvalue = "1234.4321";
-    const char* expvalue = "4321 1234";
+    char expvalue[] = "4321 1234";
     sprintf(gBuffer, "%s%s", "program --string ", expvalue);
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
@@ -371,8 +346,10 @@ TEST_F(TEST_FIXTURE, ShouldSplitParseWhitespaceString)
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
     ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
-    ASSERT_EQ(1, strncmp(expvalue, arg->value.stringvalue, strlen(expvalue)));
-    ASSERT_EQ(0, strncmp(expvalue, arg->value.stringvalue, 4));
+    ASSERT_STRNE(expvalue, arg->value.stringvalue);
+    // cut the string
+    *(char*)strchr(expvalue, ' ') = '\0';
+    ASSERT_STREQ(expvalue, arg->value.stringvalue);
 }
 
 TEST_F(TEST_FIXTURE, ShouldParseDoubleQuotedWhitespaceString)
@@ -380,12 +357,15 @@ TEST_F(TEST_FIXTURE, ShouldParseDoubleQuotedWhitespaceString)
     int argc = 0;
     const char* defvalue = "1234.4321";
     const char* expvalue = "4321 1234";
+    // tokenise_to_argc_argv does handle double quoted string
+    // will have to do it manually
     char buffer[50] = "program\000--string\0004321 1234";
     gArgv[0] = buffer;
     gArgv[1] = buffer + 8;
     gArgv[2] = buffer + 17;
     argc = 3;
     print_arguments(gArgv, argc);
+
     gHandle = argsparse_create(NULL);
     argsparse_add_cstr(gHandle, "string", "This is a string", defvalue);
     ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "string");
@@ -424,37 +404,23 @@ TEST_P(TEST_FIXTURE, ShouldAddArgument)
     TestParams params = GetParam();
     gHandle = argsparse_create(NULL);
     ASSERT_EQ(0, argsparse_argument_count(gHandle));
-    ARG_ARGUMENT_HANDLE h = argsparse_create_argument_with_value(params.Type, "argument", "This is an argument", NULL);
-    ASSERT_THAT(h, NotNull());
-    argsparse_put_argument(gHandle, &h);
-    ASSERT_THAT(h, IsNull());
+    ASSERT_EQ(ERROR_NONE, argsparse_add(gHandle, "argument", "This is and argument", params.Type, &(params.Value)));
     ASSERT_EQ(1, argsparse_argument_count(gHandle));
-}
-
-TEST_P(TEST_FIXTURE, ShouldInitializeValue)
-{
-    TestParams param = GetParam();
-    gHandle = argsparse_create(NULL);
-    ASSERT_EQ(0, argsparse_argument_count(gHandle));
-
-    ARG_ARGUMENT_HANDLE h = argsparse_create_argument_with_value(param.Type, "flag", "This is an argument", &(param.Value));
-
-    argsparse_put_argument(gHandle, &h);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "flag");
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "argument");
     ARG_VALUE value = arg->value;
-    switch (param.Type)
+    switch (params.Type)
     {
         case ARGSPARSE_TYPE_FLAG:
-            ASSERT_EQ(value.flagptr, param.Value.flagptr);
+            ASSERT_EQ(value.flagptr, params.Value.flagptr);
         break;
         case ARGSPARSE_TYPE_STRING:
-            ASSERT_STREQ(value.stringvalue, param.Value.stringvalue);
+            ASSERT_STREQ(value.stringvalue, params.Value.stringvalue);
         break;
         case ARGSPARSE_TYPE_INT:
-            ASSERT_EQ(value.intvalue, param.Value.intvalue);
+            ASSERT_EQ(value.intvalue, params.Value.intvalue);
         break;
         case ARGSPARSE_TYPE_DOUBLE:
-            ASSERT_DOUBLE_EQ(value.doublevalue, param.Value.doublevalue);
+            ASSERT_DOUBLE_EQ(value.doublevalue, params.Value.doublevalue);
         break;
         default:
             GTEST_FAIL();

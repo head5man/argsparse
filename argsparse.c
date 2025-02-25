@@ -7,15 +7,16 @@
  * 
  */
 
-#include "iterate.h"
 #include "internal_funcs.h"
+#include "iterate.h"
 
 #include <float.h>
+#include <getopt.h>
+#include <malloc.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
-#include <getopt.h>
 
 ARG_DATA_HANDLE argsparse_create(const char* title) 
 {
@@ -36,22 +37,6 @@ void argsparse_free(ARG_DATA_HANDLE handle)
         }
         free (handle);
     }
-}
-
-ARG_ARGUMENT_HANDLE argsparse_create_argument_with_value(ARG_TYPE type, const char* name, const char* desc, ARG_VALUE* value)
-{
-    ARG_ARGUMENT_HANDLE p = create_argument(name, desc);
-    p->type = type;
-    if (value)
-    {
-        memcpy(&p->value, value, sizeof(ARG_VALUE));
-        // if no pointer given point to the unused ARG_VALUE memory
-        if (type == ARGSPARSE_TYPE_FLAG && p->value.flagptr == NULL)
-        {
-            p->value.flagptr = (int*)(&p->value.flagptr + 1);
-        }
-    }
-    return p;
 }
 
 char* argsparse_get_shortopts(ARG_DATA_HANDLE handle)
@@ -81,49 +66,16 @@ int argsparse_argument_count(ARG_DATA_HANDLE handle)
     return ret;
 }
 
-ARG_ERROR argsparse_put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
+ARG_ERROR argsparse_add(ARG_DATA_HANDLE handle, const char* name, const char* description, ARG_TYPE type, const ARG_VALUE* value)
 {
-    ARG_ARGUMENT_HANDLE exists = iterate_arguments_return_on_zero(handle, predicate_compare_name, (*href)->name);
-    if (exists)
-    {
-        // free if not the same
-        if (exists != *href)
-        {
-            free_argument(href);
-        }
-        return ERROR_EXISTS;
-    }
-
-    if (handle->count >= ARGSPARSE_MAX_ARGS)
-    {
-        free_argument(href);
-        return ERROR_MAX_ARGS;
-    }
-    handle->count++;
-    HARGPARSE_ARG_LINKED new_link = calloc(1, sizeof(t_argparse_argument_linked));
-    new_link->argument = *href;
-    *href = NULL;
-
-    generate_short_name(handle, new_link->argument);
-    if (handle->arguments)
-    {
-        HARGPARSE_ARG_LINKED next = handle->arguments;
-        while (next->next)
-        {
-            next = next->next;
-        }
-        next->next = new_link;
-    }
-    else
-        handle->arguments = new_link;
-
-    return ERROR_NONE;
+    ARG_ARGUMENT_HANDLE h = create_argument(type, name, description, value);
+    return put_argument(handle, &h);
 }
 
 ARG_ERROR argsparse_add_help(ARG_DATA_HANDLE handle)
 {
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_NONE, "help", "Print this message", NULL);
-    return argsparse_put_argument(handle, &p);
+    ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_NONE, "help", "Print this message", NULL);
+    return put_argument(handle, &p);
 }
 
 ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
@@ -131,9 +83,9 @@ ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char
     ARG_VALUE argvalue;
     argvalue.intvalue = value;
 
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_INT, name, description, &argvalue);
+    ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_INT, name, description, &argvalue);
 
-    return argsparse_put_argument(handle, &p);
+    return put_argument(handle, &p);
 }
 
 ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const char* description, double value)
@@ -141,9 +93,9 @@ ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const c
     ARG_VALUE argvalue;
     argvalue.doublevalue = value;
 
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_DOUBLE, name, description, &argvalue);
+    ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_DOUBLE, name, description, &argvalue);
 
-    return argsparse_put_argument(handle, &p);
+    return put_argument(handle, &p);
 }
 
 ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const char* description, const char* value)
@@ -151,17 +103,17 @@ ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const cha
     ARG_VALUE argvalue;
     copy_to_argument_string(argvalue.stringvalue, value);
 
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_STRING, name, description, &argvalue);
-    return argsparse_put_argument(handle, &p);
+    ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_STRING, name, description, &argvalue);
+    return put_argument(handle, &p);
 }
 
 ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value, int* ptr_to_value)
 {
     ARG_VALUE argvalue = {0, };
     argvalue.flagptr = ptr_to_value;
-    ARG_ARGUMENT_HANDLE p = argsparse_create_argument_with_value(ARGSPARSE_TYPE_FLAG, name, description, &argvalue);
+    ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_FLAG, name, description, &argvalue);
     p->flag_init.flagvalue = value;
-    return argsparse_put_argument(handle, &p);
+    return put_argument(handle, &p);
 }
 
 int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
@@ -280,12 +232,62 @@ void argsparse_show_arguments(ARG_DATA_HANDLE handle)
 // Internal functions //
 ////////////////////////
 
-static ARG_ARGUMENT_HANDLE create_argument(const char* name, const char* desc)
+static ARG_ARGUMENT_HANDLE create_argument(ARG_TYPE type, const char* name, const char* desc, const ARG_VALUE* value)
 {
     ARG_ARGUMENT_HANDLE p = calloc(1, sizeof(argsparse_argument_t));
     copy_to_argument_string(p->name, name);
     copy_to_argument_string(p->description, desc);
+
+    p->type = type;
+    if (value)
+    {
+        memcpy(&p->value, value, sizeof(ARG_VALUE));
+        // if no pointer given point to the unused ARG_VALUE memory
+        if (type == ARGSPARSE_TYPE_FLAG && p->value.flagptr == NULL)
+        {
+            p->value.flagptr = (int*)(&p->value.flagptr + 1);
+        }
+    }
     return p;
+}
+
+static ARG_ERROR put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
+{
+    ARG_ARGUMENT_HANDLE exists = iterate_arguments_return_on_zero(handle, predicate_compare_name, (*href)->name);
+    if (exists)
+    {
+        // free if not the same
+        if (exists != *href)
+        {
+            free_argument(href);
+        }
+        return ERROR_EXISTS;
+    }
+
+    if (handle->count >= ARGSPARSE_MAX_ARGS)
+    {
+        free_argument(href);
+        return ERROR_MAX_ARGS;
+    }
+    handle->count++;
+    HARGPARSE_ARG_LINKED new_link = calloc(1, sizeof(t_argparse_argument_linked));
+    new_link->argument = *href;
+    *href = NULL;
+
+    generate_short_name(handle, new_link->argument);
+    if (handle->arguments)
+    {
+        HARGPARSE_ARG_LINKED next = handle->arguments;
+        while (next->next)
+        {
+            next = next->next;
+        }
+        next->next = new_link;
+    }
+    else
+        handle->arguments = new_link;
+
+    return ERROR_NONE;
 }
 
 static HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED linked)
