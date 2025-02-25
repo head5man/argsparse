@@ -331,11 +331,11 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongString2)
     ASSERT_EQ(0, strncmp(expvalue, arg->value.stringvalue, strlen(expvalue)));
 }
 
-TEST_F(TEST_FIXTURE, ShouldSplitParseWhitespaceString)
+TEST_F(TEST_FIXTURE, SplitsWhitespaceString)
 {
     int argc = 0;
     const char* defvalue = "1234.4321";
-    const char* expvalue = "4321 1234";
+    char expvalue[] = "4321 1234";
     sprintf(gBuffer, "%s%s", "program --string ", expvalue);
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
@@ -346,8 +346,10 @@ TEST_F(TEST_FIXTURE, ShouldSplitParseWhitespaceString)
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
     ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
-    ASSERT_EQ(1, strncmp(expvalue, arg->value.stringvalue, strlen(expvalue)));
-    ASSERT_EQ(0, strncmp(expvalue, arg->value.stringvalue, 4));
+    ASSERT_STRNE(expvalue, arg->value.stringvalue);
+    // cut the string
+    *(char*)strchr(expvalue, ' ') = '\0';
+    ASSERT_STREQ(expvalue, arg->value.stringvalue);
 }
 
 TEST_F(TEST_FIXTURE, ShouldParseDoubleQuotedWhitespaceString)
@@ -355,12 +357,15 @@ TEST_F(TEST_FIXTURE, ShouldParseDoubleQuotedWhitespaceString)
     int argc = 0;
     const char* defvalue = "1234.4321";
     const char* expvalue = "4321 1234";
+    // tokenise_to_argc_argv does handle double quoted string
+    // will have to do it manually
     char buffer[50] = "program\000--string\0004321 1234";
     gArgv[0] = buffer;
     gArgv[1] = buffer + 8;
     gArgv[2] = buffer + 17;
     argc = 3;
     print_arguments(gArgv, argc);
+
     gHandle = argsparse_create(NULL);
     argsparse_add_cstr(gHandle, "string", "This is a string", defvalue);
     ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "string");
