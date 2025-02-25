@@ -21,6 +21,5 @@ add_executable(${PROJECT_NAME}-test ${SourceFiles})
 target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME}-lib gtest gmock_main)
 target_include_directories(${PROJECT_NAME}-test PUBLIC ${googletest_SOURCE_DIR}/googlemock/include)
 
-include(CTest)
-
-add_test(NAME ${PROJECT_NAME}-test COMMAND ${PROJECT_NAME}-test)
+include(GoogleTest)
+gtest_discover_tests(${PROJECT_NAME}-test)
