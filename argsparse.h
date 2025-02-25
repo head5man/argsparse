@@ -23,10 +23,11 @@ extern "C"
 #endif
 
 typedef enum _argsparse_errors {
-    ERROR_NONE = 0,
-    ERROR_UNKNOWN = -1,
-    ERROR_MAX_ARGS = -2,
-    ERROR_EXISTS = -3,
+    ERROR_AP_NONE = 0,
+    ERROR_AP_UNKNOWN = -1,
+    ERROR_AP_MAX_ARGS = -2,
+    ERROR_AP_EXISTS = -3,
+    ERROR_AP_MEMORY = -4,
 } e_argsparse_errors;
 
 typedef enum _argsparse_type {
@@ -85,11 +86,11 @@ void argsparse_free(ARG_DATA_HANDLE handle);
 /// @param type
 /// @param value
 /// @return
-/// ERROR_NONE(0) - success
+/// ERROR_AP_NONE(0) - success
 ///
-/// ERROR_EXISTS - argument with same name already exists
+/// ERROR_AP_EXISTS - argument with same name already exists
 ///
-/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+/// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 /// @note Smells like internal, but having invested
 /// a quite a lot to testing it decided to drag it along.
 ARG_ERROR argsparse_add(ARG_DATA_HANDLE handle, const char* name, const char* description, ARG_TYPE type, const ARG_VALUE* value);
@@ -97,11 +98,11 @@ ARG_ERROR argsparse_add(ARG_DATA_HANDLE handle, const char* name, const char* de
 /// @brief Add help option showing usage with exit
 /// @param handle allocated arguments structure handle
 /// @return
-/// ERROR_NONE(0) - success
+/// ERROR_AP_NONE(0) - success
 ///
-/// ERROR_EXISTS - argument with same name already exists
+/// ERROR_AP_EXISTS - argument with same name already exists
 ///
-/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+/// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 ARG_ERROR argsparse_add_help(ARG_DATA_HANDLE handle);
 
 /// @brief Add int argument
@@ -110,11 +111,11 @@ ARG_ERROR argsparse_add_help(ARG_DATA_HANDLE handle);
 /// @param desc argument description
 /// @param value argument value (default)
 /// @return
-/// ERROR_NONE(0) - success
+/// ERROR_AP_NONE(0) - success
 ///
-/// ERROR_EXISTS - argument with same name already exists
+/// ERROR_AP_EXISTS - argument with same name already exists
 ///
-/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+/// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char* desc, int value);
 
 /// @brief Add DOUBLE argument
@@ -123,11 +124,11 @@ ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char
 /// @param description argument description
 /// @param value argument value (default)
 /// @return
-/// ERROR_NONE(0) - success
+/// ERROR_AP_NONE(0) - success
 ///
-/// ERROR_EXISTS - argument with same name already exists
+/// ERROR_AP_EXISTS - argument with same name already exists
 ///
-/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+/// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const char* description, double value);
 
 /// @brief Add string argument
@@ -136,11 +137,11 @@ ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const c
 /// @param description argument description
 /// @param value argument value (default)
 /// @return
-/// ERROR_NONE(0) - success
+/// ERROR_AP_NONE(0) - success
 ///
-/// ERROR_EXISTS - argument with same name already exists
+/// ERROR_AP_EXISTS - argument with same name already exists
 ///
-/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+/// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const char* description, const char* value);
 
 /// @brief Add argument flag only
@@ -150,11 +151,11 @@ ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const cha
 /// @param value Value to set when option present
 /// @param ptr_to_value pointer to value or null
 /// @return
-/// ERROR_NONE(0) - success
+/// ERROR_AP_NONE(0) - success
 ///
-/// ERROR_EXISTS - argument with same name already exists
+/// ERROR_AP_EXISTS - argument with same name already exists
 ///
-/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+/// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value, int* ptr_to_value);
 
 /// @brief Parse cmdline argument against added arguments 

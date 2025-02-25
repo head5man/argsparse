@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 
 void initialize_arguments(ARG_DATA_HANDLE arguments)
 {
-    ARG_ERROR err = ERROR_NONE;
+    ARG_ERROR err = ERROR_AP_NONE;
     err = argsparse_add_help(arguments);
     err_print(err, "help not added");
     err = argsparse_add_int(arguments, "integer", "This is an integer value", 0);
@@ -47,7 +47,7 @@ void initialize_arguments(ARG_DATA_HANDLE arguments)
 
 int err_print(int err, const char* message)
 {
-    if (err != ERROR_NONE)
+    if (err != ERROR_AP_NONE)
     {
         printf("ERR(%d): %s\n", err, message);
         throw err;

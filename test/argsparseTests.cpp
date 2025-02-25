@@ -118,9 +118,9 @@ TEST_F(TEST_FIXTURE, ShouldAppendShortOptions)
     char* shortopts = argsparse_get_shortopts(gHandle);
     ASSERT_EQ(0, *shortopts);
 
-    ASSERT_EQ(ERROR_NONE, argsparse_add_int(gHandle, "integer", "description", 0));
+    ASSERT_EQ(ERROR_AP_NONE, argsparse_add_int(gHandle, "integer", "description", 0));
     ASSERT_STREQ("i:", shortopts);
-    ASSERT_EQ(ERROR_NONE, argsparse_add_cstr(gHandle, "string", "description", "value"));
+    ASSERT_EQ(ERROR_AP_NONE, argsparse_add_cstr(gHandle, "string", "description", "value"));
     ASSERT_STREQ("i:s:", shortopts);
 }
 
@@ -130,8 +130,8 @@ TEST_F(TEST_FIXTURE, ShouldNotAppendSameOption)
     char* shortopts = argsparse_get_shortopts(gHandle);
     ASSERT_EQ(0, *shortopts);
 
-    ASSERT_EQ(ERROR_NONE, argsparse_add_int(gHandle, "integer", "description", 0));
-    ASSERT_EQ(ERROR_EXISTS, argsparse_add_int(gHandle, "integer", "description", 0));
+    ASSERT_EQ(ERROR_AP_NONE, argsparse_add_int(gHandle, "integer", "description", 0));
+    ASSERT_EQ(ERROR_AP_EXISTS, argsparse_add_int(gHandle, "integer", "description", 0));
     ASSERT_STREQ("i:", shortopts);
 }
 
@@ -404,7 +404,7 @@ TEST_P(TEST_FIXTURE, ShouldAddArgument)
     TestParams params = GetParam();
     gHandle = argsparse_create(NULL);
     ASSERT_EQ(0, argsparse_argument_count(gHandle));
-    ASSERT_EQ(ERROR_NONE, argsparse_add(gHandle, "argument", "This is and argument", params.Type, &(params.Value)));
+    ASSERT_EQ(ERROR_AP_NONE, argsparse_add(gHandle, "argument", "This is and argument", params.Type, &(params.Value)));
     ASSERT_EQ(1, argsparse_argument_count(gHandle));
     ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "argument");
     ARG_VALUE value = arg->value;

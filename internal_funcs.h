@@ -13,11 +13,11 @@ static HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED arg);
 /// @param handle Handle to allocated arguments structure
 /// @param argument Handle to allocated argument
 /// @return
-/// ERROR_NONE(0) - success
+/// ERROR_AP_NONE(0) - success
 ///
-/// ERROR_EXISTS - argument with same name already exists
+/// ERROR_AP_EXISTS - argument with same name already exists
 ///
-/// ERROR_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
+/// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 static ARG_ERROR put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* argument);
 
 void copy_to_argument_string(char* dest, const char* source);

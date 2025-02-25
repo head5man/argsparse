@@ -261,13 +261,13 @@ static ARG_ERROR put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
         {
             free_argument(href);
         }
-        return ERROR_EXISTS;
+        return ERROR_AP_EXISTS;
     }
 
     if (handle->count >= ARGSPARSE_MAX_ARGS)
     {
         free_argument(href);
-        return ERROR_MAX_ARGS;
+        return ERROR_AP_MAX_ARGS;
     }
     handle->count++;
     HARGPARSE_ARG_LINKED new_link = calloc(1, sizeof(t_argparse_argument_linked));
@@ -287,7 +287,7 @@ static ARG_ERROR put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
     else
         handle->arguments = new_link;
 
-    return ERROR_NONE;
+    return ERROR_AP_NONE;
 }
 
 static HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED linked)
