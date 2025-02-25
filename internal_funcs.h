@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 
+static ARG_ERROR CheckHandle();
 static ARG_ARGUMENT_HANDLE create_argument(ARG_TYPE type, const char* name, const char* description, const ARG_VALUE* value);
 static void free_argument(ARG_ARGUMENT_HANDLE* handle);
 static HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED arg);

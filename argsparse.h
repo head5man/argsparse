@@ -28,6 +28,7 @@ typedef enum _argsparse_errors {
     ERROR_AP_MAX_ARGS = -2,
     ERROR_AP_EXISTS = -3,
     ERROR_AP_MEMORY = -4,
+    ERROR_AP_HANDLE = -5,
 } e_argsparse_errors;
 
 typedef enum _argsparse_type {
@@ -73,11 +74,10 @@ typedef enum _argsparse_errors ARG_ERROR;
 /// @brief Create arguments structure 
 /// @param title 
 /// @return handle
-ARG_DATA_HANDLE argsparse_create(const char* title);
+ARG_ERROR argsparse_create(const char* title);
 
-/// @brief Allocate arguments structure 
-/// @param handle 
-void argsparse_free(ARG_DATA_HANDLE handle);
+/// @brief Free arguments structure
+void argsparse_free();
 
 /// @brief Adds argument using the structured format
 /// @param handle
@@ -93,7 +93,7 @@ void argsparse_free(ARG_DATA_HANDLE handle);
 /// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
 /// @note Smells like internal, but having invested
 /// a quite a lot to testing it decided to drag it along.
-ARG_ERROR argsparse_add(ARG_DATA_HANDLE handle, const char* name, const char* description, ARG_TYPE type, const ARG_VALUE* value);
+ARG_ERROR argsparse_add(const char* name, const char* description, ARG_TYPE type, const ARG_VALUE* value);
 
 /// @brief Add help option showing usage with exit
 /// @param handle allocated arguments structure handle
@@ -103,7 +103,7 @@ ARG_ERROR argsparse_add(ARG_DATA_HANDLE handle, const char* name, const char* de
 /// ERROR_AP_EXISTS - argument with same name already exists
 ///
 /// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_help(ARG_DATA_HANDLE handle);
+ARG_ERROR argsparse_add_help();
 
 /// @brief Add int argument
 /// @param handle allocated arguments structure handle
@@ -116,7 +116,7 @@ ARG_ERROR argsparse_add_help(ARG_DATA_HANDLE handle);
 /// ERROR_AP_EXISTS - argument with same name already exists
 ///
 /// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char* desc, int value);
+ARG_ERROR argsparse_add_int(const char* name, const char* desc, int value);
 
 /// @brief Add DOUBLE argument
 /// @param handle allocated arguments structure handle
@@ -129,7 +129,7 @@ ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char
 /// ERROR_AP_EXISTS - argument with same name already exists
 ///
 /// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const char* description, double value);
+ARG_ERROR argsparse_add_double(const char* name, const char* description, double value);
 
 /// @brief Add string argument
 /// @param handle allocated arguments structure handle
@@ -142,7 +142,7 @@ ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const c
 /// ERROR_AP_EXISTS - argument with same name already exists
 ///
 /// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const char* description, const char* value);
+ARG_ERROR argsparse_add_cstr(const char* name, const char* description, const char* value);
 
 /// @brief Add argument flag only
 /// @param handle allocated arguments structure handle
@@ -156,48 +156,48 @@ ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const cha
 /// ERROR_AP_EXISTS - argument with same name already exists
 ///
 /// ERROR_AP_MAX_ARGS(1) - ARGSPARSE_MAX_ARGS reached, not added
-ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value, int* ptr_to_value);
+ARG_ERROR argsparse_add_flag(const char* name, const char* description, int value, int* ptr_to_value);
 
 /// @brief Parse cmdline argument against added arguments 
 /// @param handle Handle to allocated arguments structure
 /// @param argsv
 /// @param argc
-int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const* argv, int argc);
+int argsparse_parse_args(char* const* argv, int argc);
 
 /// @brief Prints usage message
 /// @param handle
-void argsparse_show_usage(ARG_DATA_HANDLE handle, const char* const executable);
+void argsparse_show_usage(const char* const executable);
 
 /// @brief Prints argument values
 /// @param handle
-void argsparse_show_arguments(ARG_DATA_HANDLE handle);
+void argsparse_show_arguments();
 
 /// @brief Get title
 /// @param handle
 /// @return string
-const char* argsparse_get_title(ARG_DATA_HANDLE handle);
+const char* argsparse_get_title();
 
 /// @brief Get short options
 /// @param handle
 /// @return
-char* argsparse_get_shortopts(ARG_DATA_HANDLE handle);
+char* argsparse_get_shortopts();
 
 /// @brief Get argument by name
 /// @param handle
 /// @param name
 /// @return handle to argument
-ARG_ARGUMENT_HANDLE argsparse_argument_by_name(ARG_DATA_HANDLE handle, const char* name);
+ARG_ARGUMENT_HANDLE argsparse_argument_by_name(const char* name);
 
 /// @brief Get argument by short name
 /// @param handle
 /// @param name
 /// @return handle to argument
-ARG_ARGUMENT_HANDLE argsparse_argument_by_short_name(ARG_DATA_HANDLE handle, int shortname);
+ARG_ARGUMENT_HANDLE argsparse_argument_by_short_name(int shortname);
 
 /// @brief Get argument count
 /// @param handle
 /// @return count
-int argsparse_argument_count(ARG_DATA_HANDLE handle);
+int argsparse_argument_count();
 
 #if defined( __cplusplus )
 }
