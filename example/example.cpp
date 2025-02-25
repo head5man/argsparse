@@ -6,48 +6,48 @@ int gFlag = 0;
 
 int err_print(int err, const char *message);
 
-void initialize_arguments(ARG_DATA_HANDLE arguments);
+void initialize_arguments();
 
 void arg_print(ARG_ARGUMENT_HANDLE arg);
 
 int main(int argc, char **argv)
 {
-    ARG_DATA_HANDLE arguments = argsparse_create("argsparse-example");
+    argsparse_create("argsparse-example");
     try
     {
-        initialize_arguments(arguments);
-        int parsed = argsparse_parse_args(arguments, argv, argc);
-        printf("shortopts %s - %d arguments parsed\n", argsparse_get_shortopts(arguments), parsed);
-        argsparse_show_arguments(arguments);
+        initialize_arguments();
+        int parsed = argsparse_parse_args(argv, argc);
+        printf("shortopts %s - %d arguments parsed\n", argsparse_get_shortopts(), parsed);
+        argsparse_show_arguments();
     }
     catch (...)
     {
         printf("exit due to exception");
     }
-    argsparse_free(arguments);
+    argsparse_free();
 }
 
-void initialize_arguments(ARG_DATA_HANDLE arguments)
+void initialize_arguments()
 {
-    ARG_ERROR err = ERROR_NONE;
-    err = argsparse_add_help(arguments);
+    ARG_ERROR err = ERROR_AP_NONE;
+    err = argsparse_add_help();
     err_print(err, "help not added");
-    err = argsparse_add_int(arguments, "integer", "This is an integer value", 0);
+    err = argsparse_add_int("integer", "This is an integer value", 0);
     err_print(err, "integer not added");
 
-    err = argsparse_add_double(arguments, "double", "This is a double value", 0.0);
+    err = argsparse_add_double("double", "This is a double value", 0.0);
     err_print(err, "double not added");
 
-    err = argsparse_add_cstr(arguments, "string", "This is a string value", "");
+    err = argsparse_add_cstr("string", "This is a string value", "");
     err_print(err, "string not added");
 
-    err = argsparse_add_flag(arguments, "flag", "This is a flag value", 123, &gFlag);
+    err = argsparse_add_flag("flag", "This is a flag value", 123, &gFlag);
     err_print(err, "flag not added");
 }
 
 int err_print(int err, const char* message)
 {
-    if (err != ERROR_NONE)
+    if (err != ERROR_AP_NONE)
     {
         printf("ERR(%d): %s\n", err, message);
         throw err;
