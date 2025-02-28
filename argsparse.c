@@ -18,106 +18,153 @@
 #include <stdlib.h>
 #include <string.h>
 
-ARG_DATA_HANDLE argsparse_create(const char* title) 
+ARG_DATA_HANDLE g_handle = NULL;
+
+ARG_ERROR argsparse_create(const char* title)
 {
-    ARG_DATA_HANDLE p = calloc(1, sizeof(argument_data_t));
-    p->title = title;
-    p->arguments = NULL;
-    return p;
+    if (g_handle != NULL)
+    {
+        return ERROR_AP_EXISTS;
+    }
+
+    g_handle = calloc(1, sizeof(argument_data_t));
+    if (g_handle)
+    {
+        g_handle->title = title;
+        g_handle->arguments = NULL;
+    }
+    return g_handle ? ERROR_AP_NONE : ERROR_AP_MEMORY;
 }
 
-void argsparse_free(ARG_DATA_HANDLE handle)
+void argsparse_free()
 {
-    if (handle)
+    if (g_handle)
     {
-        HARGPARSE_ARG_LINKED next = handle->arguments;
+        HARGPARSE_ARG_LINKED next = g_handle->arguments;
         while (next)
         {
             next = free_linked_argument(next);
         }
-        free (handle);
+        free (g_handle);
+        g_handle = NULL;
     }
 }
 
-char* argsparse_get_shortopts(ARG_DATA_HANDLE handle)
+char* argsparse_get_shortopts()
 {
-    return (handle) ? handle->shortopts : NULL;
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
+    return g_handle->shortopts;
 }
 
-const char* argsparse_get_title(ARG_DATA_HANDLE handle)
+const char* argsparse_get_title()
 {
-    return (handle) ? handle->title : NULL;
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
+    return g_handle->title;
 }
 
-ARG_ARGUMENT_HANDLE argsparse_argument_by_name(ARG_DATA_HANDLE handle, const char* name)
+ARG_ARGUMENT_HANDLE argsparse_argument_by_name(const char* name)
 {
-    return iterate_arguments_return_on_zero(handle, predicate_compare_name, (void*)name);
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
+    return iterate_arguments_return_on_zero(g_handle, predicate_compare_name, (void*)name);
 }
 
-ARG_ARGUMENT_HANDLE argsparse_argument_by_short_name(ARG_DATA_HANDLE handle, int shortname)
+ARG_ARGUMENT_HANDLE argsparse_argument_by_short_name(int shortname)
 {
-    return iterate_arguments_return_on_zero(handle, predicate_compare_short_name, (void*)&shortname);
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
+    return iterate_arguments_return_on_zero(g_handle, predicate_compare_short_name, (void*)&shortname);
 }
 
-int argsparse_argument_count(ARG_DATA_HANDLE handle)
+int argsparse_argument_count()
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     int ret = 0;
-    iterate_arguments_return_on_zero(handle, action_count, &ret);
+    iterate_arguments_return_on_zero(g_handle, action_count, &ret);
     return ret;
 }
 
-ARG_ERROR argsparse_add(ARG_DATA_HANDLE handle, const char* name, const char* description, ARG_TYPE type, const ARG_VALUE* value)
+ARG_ERROR argsparse_add(const char* name, const char* description, ARG_TYPE type, const ARG_VALUE* value)
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     ARG_ARGUMENT_HANDLE h = create_argument(type, name, description, value);
-    return put_argument(handle, &h);
+    return put_argument(g_handle, &h);
 }
 
-ARG_ERROR argsparse_add_help(ARG_DATA_HANDLE handle)
+ARG_ERROR argsparse_add_help()
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_NONE, "help", "Print this message", NULL);
-    return put_argument(handle, &p);
+    return put_argument(g_handle, &p);
 }
 
-ARG_ERROR argsparse_add_int(ARG_DATA_HANDLE handle, const char* name, const char* description, int value)
+ARG_ERROR argsparse_add_int(const char* name, const char* description, int value)
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     ARG_VALUE argvalue;
     argvalue.intvalue = value;
 
     ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_INT, name, description, &argvalue);
 
-    return put_argument(handle, &p);
+    return put_argument(g_handle, &p);
 }
 
-ARG_ERROR argsparse_add_double(ARG_DATA_HANDLE handle, const char* name, const char* description, double value)
+ARG_ERROR argsparse_add_double(const char* name, const char* description, double value)
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     ARG_VALUE argvalue;
     argvalue.doublevalue = value;
 
     ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_DOUBLE, name, description, &argvalue);
 
-    return put_argument(handle, &p);
+    return put_argument(g_handle, &p);
 }
 
-ARG_ERROR argsparse_add_cstr(ARG_DATA_HANDLE handle, const char* name, const char* description, const char* value)
+ARG_ERROR argsparse_add_cstr(const char* name, const char* description, const char* value)
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     ARG_VALUE argvalue;
     copy_to_argument_string(argvalue.stringvalue, value);
 
     ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_STRING, name, description, &argvalue);
-    return put_argument(handle, &p);
+    return put_argument(g_handle, &p);
 }
 
-ARG_ERROR argsparse_add_flag(ARG_DATA_HANDLE handle, const char* name, const char* description, int value, int* ptr_to_value)
+ARG_ERROR argsparse_add_flag(const char* name, const char* description, int value, int* ptr_to_value)
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     ARG_VALUE argvalue = {0, };
     argvalue.flagptr = ptr_to_value;
     ARG_ARGUMENT_HANDLE p = create_argument(ARGSPARSE_TYPE_FLAG, name, description, &argvalue);
     p->flag_init.flagvalue = value;
-    return put_argument(handle, &p);
+    return put_argument(g_handle, &p);
 }
 
-int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
+int argsparse_parse_args(char* const *argv, int argc)
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     int count = 0;
     // Although application call this function only once,
     // tests call this function many times and optind has to be reset.
@@ -125,19 +172,19 @@ int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
     optind = 1;
     if (argc > 1)
     {
-        int arg_count = argsparse_argument_count(handle);
+        int arg_count = argsparse_argument_count();
         struct option *long_options = calloc(arg_count + 1, sizeof(struct option));
 
         if (long_options != NULL)
         {
             int c = 0;
-            iterate_arguments_return_on_zero(handle, action_do_option_long, (void*)(long_options));
+            iterate_arguments_return_on_zero(g_handle, action_do_option_long, (void*)(long_options));
             while(c != -1)
             {
                 /* getopt_long stores the option index here (long_options[option_index]). */
                 int option_index = 0;
                 c = getopt_long(argc, argv,
-                                handle->shortopts,
+                                g_handle->shortopts,
                                 (const struct option *)long_options,
                                 &option_index);
                 printf("option_index(%d), optind(%d)\n", option_index, optind);
@@ -155,16 +202,16 @@ int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
                         break;
 
                     case 'h':
-                        argsparse_show_usage(handle, argv[0]);
+                        argsparse_show_usage(argv[0]);
                         exit(0);
 
                     default:
                         printf ("option -%c\n", c);
-                        ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_short_name(handle, c);
+                        ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_short_name(c);
                         if (arg == NULL)
                         {
                             printf ("invalid option -%c\n", c);
-                            argsparse_show_usage(handle, argv[0]);
+                            argsparse_show_usage(argv[0]);
                             exit(1);
                         }
                         else
@@ -188,22 +235,25 @@ int argsparse_parse_args(ARG_DATA_HANDLE handle, char* const *argv, int argc)
 
                 printf("\n");
             }
-            iterate_arguments_return_on_zero(handle, action_mark_parsed_flags, NULL);
+            iterate_arguments_return_on_zero(g_handle, action_mark_parsed_flags, NULL);
             free(long_options);
         }
     }
     return count;
 }
 
-void argsparse_show_usage(ARG_DATA_HANDLE handle, const char* const executable)
+void argsparse_show_usage(const char* const executable)
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     // is there a separator?
     const char* separator = strrchr(executable, '/') ? strrchr(executable, '/') : strrchr(executable, '\\');
     // advance or fallback to executable
     const char* basename = separator ? separator + 1 : executable;
 
     printf("usage: %s", basename);
-    char* shortopt = handle->shortopts;
+    char* shortopt = g_handle->shortopts;
     while (*shortopt)
     {
         char c = *shortopt;
@@ -213,24 +263,37 @@ void argsparse_show_usage(ARG_DATA_HANDLE handle, const char* const executable)
 
         printf(" [-%c]", c);
     }
-    printf("\ntitle: %s\n", handle->title);
+    printf("\ntitle: %s\n", g_handle->title);
 
     printf("optional arguments:\n");
 
-    iterate_arguments_return_on_zero(handle, action_show_argument_usage, NULL);
+    iterate_arguments_return_on_zero(g_handle, action_show_argument_usage, NULL);
 }
 
-void argsparse_show_arguments(ARG_DATA_HANDLE handle)
+void argsparse_show_arguments()
 {
+    if (CheckHandle())
+        exit(ERROR_AP_HANDLE);
+
     printf("argument values:\n");
     size_t width = 0;
-    iterate_arguments_return_on_zero(handle, action_long_option_width, &width);
-    iterate_arguments_return_on_zero(handle, action_show_argument_value, (void*)(uintptr_t)width);
+    iterate_arguments_return_on_zero(g_handle, action_long_option_width, &width);
+    iterate_arguments_return_on_zero(g_handle, action_show_argument_value, (void*)(uintptr_t)width);
 }
 
 ////////////////////////
 // Internal functions //
 ////////////////////////
+
+static ARG_ERROR CheckHandle()
+{
+    if (g_handle == NULL)
+    {
+        fprintf(stderr, "g_handle not initialized");
+        return ERROR_AP_HANDLE;
+    }
+    return ERROR_AP_NONE;
+}
 
 static ARG_ARGUMENT_HANDLE create_argument(ARG_TYPE type, const char* name, const char* desc, const ARG_VALUE* value)
 {
@@ -261,13 +324,13 @@ static ARG_ERROR put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
         {
             free_argument(href);
         }
-        return ERROR_EXISTS;
+        return ERROR_AP_EXISTS;
     }
 
     if (handle->count >= ARGSPARSE_MAX_ARGS)
     {
         free_argument(href);
-        return ERROR_MAX_ARGS;
+        return ERROR_AP_MAX_ARGS;
     }
     handle->count++;
     HARGPARSE_ARG_LINKED new_link = calloc(1, sizeof(t_argparse_argument_linked));
@@ -287,7 +350,7 @@ static ARG_ERROR put_argument(ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE* href)
     else
         handle->arguments = new_link;
 
-    return ERROR_NONE;
+    return ERROR_AP_NONE;
 }
 
 static HARGPARSE_ARG_LINKED free_linked_argument(HARGPARSE_ARG_LINKED linked)

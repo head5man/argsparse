@@ -17,6 +17,12 @@
 #include <ostream>
 #include <memory>
 
+#if defined(__linux__)
+#define ExitCode(a) ((a) < 0 ? (a) + 256 : (a))
+#else
+#define ExitCode(a) a
+#endif
+
 namespace argsparse::testing
 {
 #define TEST_FIXTURE argsparse_test
@@ -86,8 +92,7 @@ class TEST_FIXTURE:public ::testing::TestWithParam<TestParams>
 
     void TearDown() override
     {
-       argsparse_free(gHandle);
-       gHandle = nullptr;
+       argsparse_free();
     }
 };
 
@@ -99,39 +104,68 @@ void print_arguments(char* const* argv, int argc)
     }
 }
 
-TEST_F(TEST_FIXTURE, ShouldAllocateHandle)
+void assert_create_arguments(const char* title = nullptr, ARG_ERROR expected = ERROR_AP_NONE)
 {
-    gHandle = argsparse_create(NULL);
-    ASSERT_THAT(gHandle, NotNull());
+    ARG_ERROR err = argsparse_create(title);
+    ASSERT_THAT(expected, err);
+}
+
+TEST_F(TEST_FIXTURE, Create)
+{
+    assert_create_arguments();
+}
+
+TEST_F(TEST_FIXTURE, ErrorWhenDoubleCreate)
+{
+    assert_create_arguments();
+    assert_create_arguments(NULL, ERROR_AP_EXISTS);
+}
+
+TEST_F(TEST_FIXTURE, ExitWhenNoHandle)
+{
+    std::cerr << "ExitCode: " << ExitCode(ERROR_AP_HANDLE) << std::endl;
+    ASSERT_EXIT(argsparse_get_title(), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add("", "", ARGSPARSE_TYPE_NONE, NULL), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add_cstr("", "", ""), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add_int("", "", 1), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add_double("", "", 123.1), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add_flag("", "", 123, nullptr), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_argument_by_name(""), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_argument_by_short_name(1), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_argument_count(), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_get_shortopts(), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_parse_args(nullptr, 0), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_show_arguments(), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_show_usage(""), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
 }
 
 TEST_F(TEST_FIXTURE, HandleShouldGetTitle)
 {
     const char* title = "Testing version 1.0 - Arguments";
-    gHandle = argsparse_create(title);
-    ASSERT_STREQ(title, argsparse_get_title(gHandle));
+    assert_create_arguments(title);
+    ASSERT_STREQ(title, argsparse_get_title());
 }
 
 TEST_F(TEST_FIXTURE, ShouldAppendShortOptions)
 {
-    gHandle = argsparse_create(NULL);
-    char* shortopts = argsparse_get_shortopts(gHandle);
+    assert_create_arguments();
+    char* shortopts = argsparse_get_shortopts();
     ASSERT_EQ(0, *shortopts);
 
-    ASSERT_EQ(ERROR_NONE, argsparse_add_int(gHandle, "integer", "description", 0));
+    ASSERT_EQ(ERROR_AP_NONE, argsparse_add_int("integer", "description", 0));
     ASSERT_STREQ("i:", shortopts);
-    ASSERT_EQ(ERROR_NONE, argsparse_add_cstr(gHandle, "string", "description", "value"));
+    ASSERT_EQ(ERROR_AP_NONE, argsparse_add_cstr("string", "description", "value"));
     ASSERT_STREQ("i:s:", shortopts);
 }
 
 TEST_F(TEST_FIXTURE, ShouldNotAppendSameOption)
 {
-    gHandle = argsparse_create(NULL);
-    char* shortopts = argsparse_get_shortopts(gHandle);
+    assert_create_arguments();
+    char* shortopts = argsparse_get_shortopts();
     ASSERT_EQ(0, *shortopts);
 
-    ASSERT_EQ(ERROR_NONE, argsparse_add_int(gHandle, "integer", "description", 0));
-    ASSERT_EQ(ERROR_EXISTS, argsparse_add_int(gHandle, "integer", "description", 0));
+    ASSERT_EQ(ERROR_AP_NONE, argsparse_add_int("integer", "description", 0));
+    ASSERT_EQ(ERROR_AP_EXISTS, argsparse_add_int("integer", "description", 0));
     ASSERT_STREQ("i:", shortopts);
 }
 
@@ -143,23 +177,23 @@ TEST_F(TEST_FIXTURE, ParsesAllOptionTypes)
     int flgExpected = 1234;
     int intExpected = 4321;
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_cstr(gHandle, "string", "", "This is the initial value");
-    argsparse_add_double(gHandle, "double", "", 1234.1234);
-    argsparse_add_flag(gHandle, "flag", "", flgExpected, &flgValue);
-    argsparse_add_int(gHandle, "integer", "", 1234);
+    assert_create_arguments();
+    argsparse_add_cstr("string", "", "This is the initial value");
+    argsparse_add_double("double", "", 1234.1234);
+    argsparse_add_flag("flag", "", flgExpected, &flgValue);
+    argsparse_add_int("integer", "", 1234);
     const char* fmt = "prg --string %s --double %f --flag --integer %d";
     sprintf(gBuffer, fmt, strExpected, dblExpected, intExpected);
     tokenise_to_argc_argv(gBuffer, &gArgc, gArgv, ARGV_SIZE, print_arguments);
-    ASSERT_EQ(4, argsparse_parse_args(gHandle, gArgv, gArgc));
+    ASSERT_EQ(4, argsparse_parse_args(gArgv, gArgc));
 
     ARG_ARGUMENT_HANDLE arg;
-    arg = argsparse_argument_by_name(gHandle, "string");
+    arg = argsparse_argument_by_name("string");
     ASSERT_STREQ("new_value", arg->value.stringvalue);
-    arg = argsparse_argument_by_name(gHandle, "double");
+    arg = argsparse_argument_by_name("double");
     ASSERT_DOUBLE_EQ(dblExpected, arg->value.doublevalue);
     ASSERT_EQ(flgExpected, flgValue);
-    arg = argsparse_argument_by_name(gHandle, "integer");
+    arg = argsparse_argument_by_name("integer");
     ASSERT_EQ(intExpected, arg->value.intvalue);
 }
 
@@ -171,12 +205,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongFlag)
     sprintf(gBuffer, "program --flag");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_flag(gHandle, "flag", "This is a flag", expected, &value);
+    assert_create_arguments();
+    argsparse_add_flag("flag", "This is a flag", expected, &value);
     
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
 
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "flag");
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("flag");
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(expected, *arg->value.flagptr);
 }
@@ -187,12 +221,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongInt)
     sprintf(gBuffer, "program --integer 4321");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_int(gHandle, "integer", "This is an integer", 1234);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "integer");
+    assert_create_arguments();
+    argsparse_add_int("integer", "This is an integer", 1234);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("integer");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(1234, arg->value.intvalue);
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(4321, arg->value.intvalue);
 }
@@ -203,12 +237,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongInt2)
     sprintf(gBuffer, "program --integer=4321");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_int(gHandle, "integer", "This is an integer", 1234);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "integer");
+    assert_create_arguments();
+    argsparse_add_int("integer", "This is an integer", 1234);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("integer");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(1234, arg->value.intvalue);
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(4321, arg->value.intvalue);
 }
@@ -219,12 +253,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionShortInt)
     sprintf(gBuffer, "program -i 4321");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_int(gHandle, "integer", "This is an integer", 1234);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "integer");
+    assert_create_arguments();
+    argsparse_add_int("integer", "This is an integer", 1234);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("integer");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(1234, arg->value.intvalue);
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(4321, arg->value.intvalue);
 }
@@ -235,12 +269,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionShortDouble)
     sprintf(gBuffer, "program -d 4321.1234");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_double(gHandle, "double", "This is a double", 1234.4321);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "double");
+    assert_create_arguments();
+    argsparse_add_double("double", "This is a double", 1234.4321);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("double");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(1234.4321, arg->value.doublevalue);
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(4321.1234, arg->value.doublevalue);
 }
@@ -251,12 +285,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongDouble1)
     sprintf(gBuffer, "program --double 4321.1234");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_double(gHandle, "double", "This is a double", 1234.4321);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "double");
+    assert_create_arguments();
+    argsparse_add_double("double", "This is a double", 1234.4321);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("double");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(1234.4321, arg->value.doublevalue);
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(4321.1234, arg->value.doublevalue);
 }
@@ -267,12 +301,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongDouble2)
     sprintf(gBuffer, "program --double=4321.1234");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_double(gHandle, "double", "This is a double", 1234.4321);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "double");
+    assert_create_arguments();
+    argsparse_add_double("double", "This is a double", 1234.4321);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("double");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(1234.4321, arg->value.doublevalue);
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(4321.1234, arg->value.doublevalue);
 }
@@ -285,12 +319,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionShortString)
     sprintf(gBuffer, "%s%s", "program -s ", expvalue);
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_cstr(gHandle, "string", "This is a string", defvalue);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "string");
+    assert_create_arguments();
+    argsparse_add_cstr("string", "This is a string", defvalue);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("string");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_STREQ(expvalue, arg->value.stringvalue);
 }
@@ -303,12 +337,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongString1)
     sprintf(gBuffer, "%s%s", "program --string=", expvalue);
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_cstr(gHandle, "string", "This is a string", defvalue);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "string");
+    assert_create_arguments();
+    argsparse_add_cstr("string", "This is a string", defvalue);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("string");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_STREQ(expvalue, arg->value.stringvalue);
 }
@@ -321,12 +355,12 @@ TEST_F(TEST_FIXTURE, ShouldParseOptionLongString2)
     sprintf(gBuffer, "%s%s", "program --string ", "4321.1234");
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_cstr(gHandle, "string", "This is a string", defvalue);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "string");
+    assert_create_arguments();
+    argsparse_add_cstr("string", "This is a string", defvalue);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("string");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(0, strncmp(expvalue, arg->value.stringvalue, strlen(expvalue)));
 }
@@ -339,12 +373,12 @@ TEST_F(TEST_FIXTURE, SplitsWhitespaceString)
     sprintf(gBuffer, "%s%s", "program --string ", expvalue);
     tokenise_to_argc_argv(gBuffer, &argc, gArgv, ARGV_SIZE, print_arguments);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_cstr(gHandle, "string", "This is a string", defvalue);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "string");
+    assert_create_arguments();
+    argsparse_add_cstr("string", "This is a string", defvalue);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("string");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_STRNE(expvalue, arg->value.stringvalue);
     // cut the string
@@ -366,12 +400,12 @@ TEST_F(TEST_FIXTURE, ShouldParseDoubleQuotedWhitespaceString)
     argc = 3;
     print_arguments(gArgv, argc);
 
-    gHandle = argsparse_create(NULL);
-    argsparse_add_cstr(gHandle, "string", "This is a string", defvalue);
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "string");
+    assert_create_arguments();
+    argsparse_add_cstr("string", "This is a string", defvalue);
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("string");
     ASSERT_THAT(arg, NotNull());
     ASSERT_EQ(0, strncmp(defvalue, arg->value.stringvalue, strlen(defvalue)));
-    ASSERT_EQ(1, argsparse_parse_args(gHandle, gArgv, argc));
+    ASSERT_EQ(1, argsparse_parse_args(gArgv, argc));
     ASSERT_EQ(1, arg->parsed);
     ASSERT_EQ(0, strncmp(expvalue, arg->value.stringvalue, strlen(expvalue)));
 }
@@ -388,11 +422,11 @@ TEST_F(TEST_FIXTURE, UsageOutput)
     "    args: [str:defvalue]\n"
     "\n";
 
-    gHandle = argsparse_create("Title");
+    assert_create_arguments("Title");
 
-    argsparse_add_cstr(gHandle, "string", "This is a string", "defvalue");
+    argsparse_add_cstr("string", "This is a string", "defvalue");
     ::testing::internal::CaptureStdout();
-    argsparse_show_usage(gHandle, executable);
+    argsparse_show_usage(executable);
     std::string output = ::testing::internal::GetCapturedStdout();
     ASSERT_STREQ(expected, output.c_str());
 }
@@ -402,11 +436,11 @@ TEST_F(TEST_FIXTURE, UsageOutput)
 TEST_P(TEST_FIXTURE, ShouldAddArgument)
 {
     TestParams params = GetParam();
-    gHandle = argsparse_create(NULL);
-    ASSERT_EQ(0, argsparse_argument_count(gHandle));
-    ASSERT_EQ(ERROR_NONE, argsparse_add(gHandle, "argument", "This is and argument", params.Type, &(params.Value)));
-    ASSERT_EQ(1, argsparse_argument_count(gHandle));
-    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name(gHandle, "argument");
+    assert_create_arguments();
+    ASSERT_EQ(0, argsparse_argument_count());
+    ASSERT_EQ(ERROR_AP_NONE, argsparse_add("argument", "This is and argument", params.Type, &(params.Value)));
+    ASSERT_EQ(1, argsparse_argument_count());
+    ARG_ARGUMENT_HANDLE arg = argsparse_argument_by_name("argument");
     ARG_VALUE value = arg->value;
     switch (params.Type)
     {

@@ -116,7 +116,7 @@ int parse_value(ARG_VALUE* ref, ARG_TYPE type, const char* str_value)
 
 int set_short_option(char c, ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg)
 {
-    int ret = ERROR_EXISTS;
+    int ret = ERROR_AP_EXISTS;
     char* opt = handle->shortopts;
     // iterate used until terminating 0
     while (*opt)
@@ -141,7 +141,7 @@ int set_short_option(char c, ARG_DATA_HANDLE handle, ARG_ARGUMENT_HANDLE arg)
             *(opt + 2) = '\0';
         }
         arg->name_short = c;
-        ret = ERROR_NONE;
+        ret = ERROR_AP_NONE;
     }
 
     return ret;
