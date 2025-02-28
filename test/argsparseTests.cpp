@@ -17,6 +17,12 @@
 #include <ostream>
 #include <memory>
 
+#if defined(__linux__)
+#define ExitCode(a) ((a) < 0 ? (a) + 256 : (a))
+#else
+#define ExitCode(a) a
+#endif
+
 namespace argsparse::testing
 {
 #define TEST_FIXTURE argsparse_test
@@ -117,19 +123,20 @@ TEST_F(TEST_FIXTURE, ErrorWhenDoubleCreate)
 
 TEST_F(TEST_FIXTURE, ExitWhenNoHandle)
 {
-    ASSERT_EXIT(argsparse_get_title(), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_add("", "", ARGSPARSE_TYPE_NONE, NULL), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_add_cstr("", "", ""), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_add_int("", "", 1), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_add_double("", "", 123.1), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_add_flag("", "", 123, nullptr), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_argument_by_name(""), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_argument_by_short_name(1), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_argument_count(), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_get_shortopts(), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_parse_args(nullptr, 0), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_show_arguments(), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
-    ASSERT_EXIT(argsparse_show_usage(""), ::testing::ExitedWithCode(ERROR_AP_HANDLE), "g_handle not initialized");
+    std::cerr << "ExitCode: " << ExitCode(ERROR_AP_HANDLE) << std::endl;
+    ASSERT_EXIT(argsparse_get_title(), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add("", "", ARGSPARSE_TYPE_NONE, NULL), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add_cstr("", "", ""), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add_int("", "", 1), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add_double("", "", 123.1), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_add_flag("", "", 123, nullptr), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_argument_by_name(""), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_argument_by_short_name(1), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_argument_count(), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_get_shortopts(), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_parse_args(nullptr, 0), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_show_arguments(), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
+    ASSERT_EXIT(argsparse_show_usage(""), ::testing::ExitedWithCode(ExitCode(ERROR_AP_HANDLE)), "g_handle not initialized");
 }
 
 TEST_F(TEST_FIXTURE, HandleShouldGetTitle)
