@@ -5,10 +5,10 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
-include(${CMAKE_CURRENT_LIST_DIR}/../cmake/googletest.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/googletest.cmake)
 
 # Main source directory
-include_directories(${CMAKE_CURRENT_LIST_DIR}/..)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/../../include)
 
 list(APPEND SourceFiles
     ${CMAKE_CURRENT_LIST_DIR}/TestMain.cpp

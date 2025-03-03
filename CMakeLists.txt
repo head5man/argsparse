@@ -7,4 +7,4 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/example)
 
 enable_testing()
 
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tests)
